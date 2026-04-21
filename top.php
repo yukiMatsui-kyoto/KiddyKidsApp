@@ -12,6 +12,27 @@ if (!isset($_SESSION['user_id'])) {
 $user_name = $_SESSION['name_kana'];
 ?>
 
+<?php
+//直近の練習を1件取得
+$stmt = $pdo->prepare("SELECT * FROM practices WHERE practice_date >= CURDATE() AND is_cancelled = 0 ORDER BY practice_date ASC LIMIT 1");
+$stmt->execute();
+$next_practice = $stmt->fetch();
+
+//参加者一覧を取得（直近の練習用）
+$participants = [];
+if ($next_practice) {
+    $stmt = $pdo->prepare("SELECT u.name_kana FROM practice_attendance a JOIN users u ON a.user_id = u.id WHERE a.practice_id = ? AND a.status IN ('フル', '途中')");
+    $stmt->execute([$next_practice['id']]);
+    $participants = $stmt->fetchAll(PDO::FETCH_COLUMN);
+}
+
+//ちょうど8日前の練習を取得
+// つまり練習日が今日から見て8日後のもの
+$stmt = $pdo->prepare("SELECT * FROM practices WHERE practice_date = DATE_ADD(CURDATE(), INTERVAL 8 DAY)");
+$stmt->execute();
+$deadline_practice = $stmt->fetch();
+?>
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
