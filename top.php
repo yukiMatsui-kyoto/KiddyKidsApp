@@ -1,68 +1,95 @@
 <?php
-// セッションを再開
 session_start();
+require_once 'db.php';
 
-// user_idを持っていなければ、ログイン画面に強制送還
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit;
 }
 
-// ログインしている人の名前を変数に
 $user_name = $_SESSION['name_kana'];
-?>
 
-<?php
-//直近の練習を1件取得
+// 直近の（今日以降の）練習を取得
 $stmt = $pdo->prepare("SELECT * FROM practices WHERE practice_date >= CURDATE() AND is_cancelled = 0 ORDER BY practice_date ASC LIMIT 1");
 $stmt->execute();
 $next_practice = $stmt->fetch();
 
-//参加者一覧を取得（直近の練習用）
-$participants = [];
+// 直近の練習の参加者を取得して、表示用に分ける
+$participants_full = [];
+$participants_half = [];
 if ($next_practice) {
-    $stmt = $pdo->prepare("SELECT u.name_kana FROM practice_attendance a JOIN users u ON a.user_id = u.id WHERE a.practice_id = ? AND a.status IN ('フル', '途中')");
+    $stmt = $pdo->prepare("
+        SELECT u.name_kana, a.status 
+        FROM practice_attendance a 
+        JOIN users u ON a.user_id = u.id 
+        WHERE a.practice_id = ? AND a.status IN ('フル', '途中')
+    ");
     $stmt->execute([$next_practice['id']]);
-    $participants = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    $all_participants = $stmt->fetchAll();
+    
+    foreach ($all_participants as $p) {
+        if ($p['status'] === 'フル') {
+            $participants_full[] = $p['name_kana'];
+        } else {
+            $participants_half[] = $p['name_kana'];
+        }
+    }
 }
-
-//ちょうど8日前の練習を取得
-// つまり練習日が今日から見て8日後のもの
-$stmt = $pdo->prepare("SELECT * FROM practices WHERE practice_date = DATE_ADD(CURDATE(), INTERVAL 8 DAY)");
-$stmt->execute();
-$deadline_practice = $stmt->fetch();
 ?>
 
 <!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>TOP</title>
+    <title>ホーム - 練習管理</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        /* 参加者リスト用の追加デザイン */
+        .participant-list { margin-top: 20px; text-align: left; background: #f8f9fa; padding: 15px; border-radius: 8px; }
+        .participant-list ul { margin: 5px 0 15px 20px; padding: 0; color: #444; }
+        .participant-list li { margin-bottom: 5px; }
+    </style>
 </head>
 <body>
     <div class="top-container">
+        <?php include 'sidebar.php'; // サイドメニューを作った場合はここで読み込み ?>
+        
         <header class="top-header">
-            <h2><?php echo htmlspecialchars($user_name); ?> さん</h2>
-            <a href="logout.php" class="btn-logout">ログアウト</a>
+            <h2>ホーム</h2>
+            <p><?php echo htmlspecialchars($user_name); ?> さん</p>
         </header>
 
-        <div class="menu-grid">
-            <a href="events.php" class="menu-card">
-                <h3>練習参加登録</h3>
-                <p>フレ団練の出欠を入力します</p>
-            </a>
+        <?php if ($next_practice): ?>
+        <div class="main-card">
+            <h3 style="color: #007bff;"> 次回の練習：<?php echo date('n月j日', strtotime($next_practice['practice_date'])); ?></h3>
+            <p>
+                <?php echo date('H:i', strtotime($next_practice['start_time'])); ?> - <?php echo date('H:i', strtotime($next_practice['end_time'])); ?><br>
+                <?php echo htmlspecialchars($next_practice['location']); ?>
+            </p>
+            
+            <a href="attendance_list.php" class="btn-submit" style="display:inline-block; margin: 15px 0; text-decoration: none;">出欠を入力・変更する</a>
 
-            <a href="payment.php" class="menu-card">
-                <h3>借金・チャージ状況</h3>
-                <p>自分の参加履歴と、未払いの金額を確認します</p>
-            </a>
+            <div class="participant-list">
+                <h4> 参加予定者 (合計: <?php echo count($participants_full) + count($participants_half); ?>名)</h4>
+                
+                <strong>フル参加 (<?php echo count($participants_full); ?>名)</strong>
+                <ul>
+                    <?php foreach ($participants_full as $name) echo "<li>" . htmlspecialchars($name) . "</li>"; ?>
+                    <?php if (empty($participants_full)) echo "<li>なし</li>"; ?>
+                </ul>
 
-            <a href="admin.php" class="menu-card admin-card">
-                <h3>管理画面</h3>
-                <p>新しい練習の作成や、全体の集計を行います</p>
-            </a>
+                <strong>途中参加 (<?php echo count($participants_half); ?>名)</strong>
+                <ul>
+                    <?php foreach ($participants_half as $name) echo "<li>" . htmlspecialchars($name) . "</li>"; ?>
+                    <?php if (empty($participants_half)) echo "<li>なし</li>"; ?>
+                </ul>
+            </div>
         </div>
+        <?php else: ?>
+        <div class="main-card">
+            <h3>今後の練習予定はまだありません。</h3>
+        </div>
+        <?php endif; ?>
     </div>
 </body>
 </html>
