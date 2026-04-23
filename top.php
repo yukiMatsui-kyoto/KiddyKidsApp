@@ -19,7 +19,7 @@ $participants_full = [];
 $participants_half = [];
 if ($next_practice) {
     $stmt = $pdo->prepare("
-        SELECT u.name_kana, a.status 
+        SELECT COALESCE(u.display_name, u.name_kana) as show_name, a.status 
         FROM practice_attendance a 
         JOIN users u ON a.user_id = u.id 
         WHERE a.practice_id = ? AND a.status IN ('フル', '途中')
@@ -29,9 +29,9 @@ if ($next_practice) {
     
     foreach ($all_participants as $p) {
         if ($p['status'] === 'フル') {
-            $participants_full[] = $p['name_kana'];
+            $participants_full[] = $p['show_name'];
         } else {
-            $participants_half[] = $p['name_kana'];
+            $participants_half[] = $p['show_name'];
         }
     }
 }

@@ -73,6 +73,45 @@ $total_unpaid = 0; // 未払い合計額
         </header>
 
         <div class="main-card">
+    <h3 style="margin-bottom: 20px;">👤 <?php echo htmlspecialchars($user_name); ?> さんのマイページ</h3>
+    
+    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 30px; border: 1px solid #ddd;">
+        <h4 style="margin-top: 0;">表示名設定</h4>
+        <p style="font-size: 0.9em; color: #666;">練習一覧に表示される名前を自由に変更できます。（未設定の場合はひらがな本名が表示されます）</p>
+        
+        <?php if (isset($_GET['updated'])): ?>
+            <p style="color: #28a745; font-weight: bold;">表示名を更新しました！</p>
+        <?php endif; ?>
+
+        <form action="update_profile.php" method="POST" style="display: flex; gap: 10px; align-items: center;">
+            <input type="text" name="display_name" value="<?php echo htmlspecialchars($current_display_name ?? ''); ?>" placeholder="例：なかがわゆうた→ぴー" style="padding: 8px; width: 60%; border: 1px solid #ccc; border-radius: 4px;">
+            <button type="submit" style="background: #17a2b8; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer;">保存する</button>
+        </form>
+    </div>
+
+                    <td style="padding: 10px;">
+                        <?php
+                        $stmt = $pdo->prepare("
+                            SELECT u.name_kana, u.display_name, a.status 
+                            FROM practice_attendance a 
+                            JOIN users u ON a.user_id = u.id 
+                            WHERE a.practice_id = ? AND a.status IN ('フル', '途中')
+                        ");
+                        $stmt->execute([$p['id']]);
+                        $members = $stmt->fetchAll();
+                        
+                        if (empty($members)) {
+                            echo '<span style="color:#999; font-size:0.8em;">まだ参加者はいません</span>';
+                        } else {
+                            foreach ($members as $m) {
+                                $class = ($m['status'] === 'フル') ? 'full-tag' : 'half-tag';
+                                $show_name = !empty($m['display_name']) ? $m['display_name'] : $m['name_kana'];
+                                
+                                echo '<span class="participant-tag ' . $class . '">' . htmlspecialchars($show_name) . '</span>';
+                            }
+                        }
+                        ?>
+                    </td>
             <h3 style="margin-bottom: 20px;">👤 <?php echo htmlspecialchars($user_name); ?> さんの支払い状況</h3>
             
             <table class="practice-table" style="width: 100%; border-collapse: collapse; text-align: center;">
