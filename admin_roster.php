@@ -2,120 +2,99 @@
 // admin_roster.php
 session_start();
 require_once 'db.php';
+if (!isset($_SESSION['is_admin'])) { header('Location: admin_login.php'); exit; }
 
-if (!isset($_SESSION['user_id'])) {
-    header('Location: login.php');
-    exit;
+// --- 一括公開処理 ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['publish_all'])) {
+    $stmt = $pdo->prepare("UPDATE practices SET is_published = 1 WHERE practice_date <= CURDATE()");
+    $stmt->execute();
+    header("Location: admin_roster.php?published=1"); exit;
 }
 
-// どの練習日を見るか（URLの ?id=〇 で指定。無ければ直近の練習）
-$practice_id = $_GET['id'] ?? null;
+// 全ユーザーと今日までの全練習を取得
+$users = $pdo->query("SELECT id, name_kana, generation FROM users ORDER BY generation DESC, name_kana ASC")->fetchAll();
+$practices = $pdo->query("SELECT * FROM practices WHERE practice_date <= CURDATE() AND is_cancelled = 0")->fetchAll();
 
-if (!$practice_id) {
-    // IDが指定されていない場合は直近の練習IDを取得
-    $stmt = $pdo->query("SELECT id FROM practices WHERE practice_date >= CURDATE() AND is_cancelled = 0 ORDER BY practice_date ASC LIMIT 1");
-    $practice_id = $stmt->fetchColumn();
-}
+$user_totals = [];
+foreach ($users as $u) { $user_totals[$u['id']] = 0; }
 
-// 指定した練習の詳細を取得
-$stmt = $pdo->prepare("SELECT * FROM practices WHERE id = ?");
-$stmt->execute([$practice_id]);
-$practice = $stmt->fetch();
-
-// --- 割り勘の計算ロジック（マイページと同じ） ---
-$attendees = [];
-$total_weight = 0;
-$facility_fee = $practice ? $practice['facility_fee'] : 0;
-
-if ($practice) {
-    // この日の参加者全員（ペナルティ欠席含む）を取得
-    $stmt = $pdo->prepare("
-        SELECT u.name_kana, a.status, a.is_penalty 
-        FROM practice_attendance a 
-        JOIN users u ON a.user_id = u.id 
-        WHERE a.practice_id = ? AND (a.status IN ('フル', '途中') OR a.is_penalty = 1)
-    ");
-    $stmt->execute([$practice_id]);
-    $attendees = $stmt->fetchAll();
-
-    foreach ($attendees as $att) {
-        if ($att['status'] === 'フル' || $att['is_penalty'] == 1) {
-            $total_weight += 1.0;
-        } elseif ($att['status'] === '途中') {
-            $total_weight += 0.5;
-        }
+foreach ($practices as $p) {
+    $stmt = $pdo->prepare("SELECT user_id, status, is_penalty FROM practice_attendance WHERE practice_id = ?");
+    $stmt->execute([$p['id']]);
+    $atts = $stmt->fetchAll();
+    
+    $total_weight = 0;
+    $temp_weights = [];
+    foreach ($atts as $a) {
+        $w = 0;
+        if ($a['status'] === '参加' || $a['is_penalty'] == 1) $w = 1.0;
+        elseif ($a['status'] === '途中') $w = 0.5;
+        $temp_weights[$a['user_id']] = $w;
+        $total_weight += $w;
+    }
+    $unit_price = ($total_weight > 0) ? ($p['facility_fee'] / $total_weight) : 0;
+    foreach ($temp_weights as $uid => $w) {
+        $user_totals[$uid] += round($unit_price * $w);
     }
 }
-
-// 1係数あたりの基本額（0割エラー防止）
-$base_fee = ($total_weight > 0) ? ($facility_fee / $total_weight) : 0;
-$total_collected = 0; // 集金予定額の合計
 ?>
 
 <!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>集金名簿 - 管理画面</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>全体会計名簿 - FreshTSystem</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="top-container">
-        <header class="top-header">
-            <h2>【会計用】集金・出欠名簿</h2>
-            <a href="admin.php" class="btn-logout" style="background:#6c757d;">管理画面へ戻る</a>
+    <?php include 'sidebar.php'; ?>
+
+    <div class="main-wrapper">
+        <header class="top-bar">
+            <strong>合計会計名簿</strong>
         </header>
 
-        <?php if ($practice): ?>
-        <div class="admin-card">
-            <h3><?php echo date('n月j日', strtotime($practice['practice_date'])); ?> の練習</h3>
-            <p style="color: #666;">
-                場所代: ¥<?php echo number_format($facility_fee); ?> / 
-                総係数: <?php echo $total_weight; ?>
-            </p>
-
-            <table class="practice-table" style="width: 100%; text-align: center; margin-top: 20px;">
-                <tr style="background: #007bff; color: white;">
-                    <th style="padding: 10px;">名前</th>
-                    <th>参加状況</th>
-                    <th>集金額</th>
-                </tr>
+        <main class="content-body">
+            <div class="main-card">
+                <?php if(isset($_GET['published'])) echo '<p style="color:#28a745; font-weight:bold;">全員のマイページに金額を一括公開しました！</p>'; ?>
                 
-                <?php foreach ($attendees as $att): ?>
-                    <?php 
-                    // 負担額の計算
-                    $weight = ($att['status'] === 'フル' || $att['is_penalty'] == 1) ? 1.0 : 0.5;
-                    $fee = round($base_fee * $weight);
-                    $total_collected += $fee;
-                    ?>
-                    <tr style="border-bottom: 1px solid #ddd;">
-                        <td style="padding: 15px 0; font-weight: bold;"><?php echo htmlspecialchars($att['name_kana']); ?></td>
-                        <td>
-                            <?php 
-                            if ($att['is_penalty']) {
-                                echo '<span style="color:#dc3545; font-weight:bold;">ペナルティ欠席</span>';
-                            } else {
-                                echo htmlspecialchars($att['status']); 
-                            }
-                            ?>
-                        </td>
-                        <td style="font-size: 1.2em; color: #d35400; font-weight: bold;">
-                            ¥<?php echo number_format($fee); ?>
-                        </td>
-                    </tr>
-                <?php endforeach; ?>
-            </table>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <div>
+                        <h3 style="margin:0;">今日までの全練習の合計</h3>
+                        <p style="color: #666; font-size:0.9em; margin-top:5px;">※管理者は未公開分も含めた全額が表示されています</p>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <a href="export_roster.php" class="btn-submit" style="background: #28a745; text-decoration: none; padding: 10px 20px;">CSV出力</a>
+                        <form method="POST">
+                            <button type="submit" name="publish_all" class="btn-publish" style="padding: 10px 20px;" onclick="return confirm('合計金額をマイページに一括公開しますか？')">
+                                金額を全員に一括公開(＊フレ団終了後!!)
+                            </button>
+                        </form>
+                    </div>
+                </div>
 
-            <div style="margin-top: 20px; padding: 15px; background: #e8f4f8; text-align: right; border-radius: 8px;">
-                <p style="margin: 0;">集金予定額: <strong>¥<?php echo number_format($total_collected); ?></strong></p>
-                <p style="margin: 5px 0 0 0; font-size: 0.8em; color: #888;">
-                    （※四捨五入の都合上、場所代と数円の誤差が出ることがあります）
-                </p>
+                <table class="practice-table">
+                    <thead>
+                        <tr style="background: #4a86e8; color: white;">
+                            <th>代</th>
+                            <th>名前</th>
+                            <th>合計金額</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($users as $u): ?>
+                        <tr>
+                            <td><?php echo htmlspecialchars($u['generation']); ?></td>
+                            <td><strong><?php echo htmlspecialchars($u['name_kana']); ?></strong></td>
+                            <td style="font-size: 1.2em; font-weight: bold; <?php if($user_totals[$u['id']] == 0) echo 'color:#ccc;'; else echo 'color:#d35400;'; ?>">
+                                ¥<?php echo number_format($user_totals[$u['id']]); ?>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
             </div>
-        </div>
-        <?php else: ?>
-            <p>対象の練習が見つかりません。</p>
-        <?php endif; ?>
+        </main>
     </div>
 </body>
 </html>

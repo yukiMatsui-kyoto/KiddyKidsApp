@@ -1,92 +1,96 @@
-/* --- TOPページ用のデザイン --- */
-.top-container {
-    max-width: 800px;
-    margin: 0 auto;
-    width: 100%;
+/* style.css */
+:root {
+    --primary-color: #79a3e2;
+    --sidebar-width: 300px;
+    --header-height: 80px;
 }
 
-.top-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 30px;
-    border-bottom: 2px solid #ddd;
-    padding-bottom: 10px;
+body {
+    margin: 0; 
+    font-family: "Helvetica Neue", Arial, sans-serif; 
+    background-color: #f0f2f5; 
 }
 
-.btn-logout {
-    background: #dc3545;
-    color: white;
-    padding: 8px 15px;
-    text-decoration: none;
-    border-radius: 5px;
-    font-size: 0.9em;
+/* 1. 上部の固定ナビゲーションバー（青い帯） */
+.global-navbar {
+    position: fixed; top: 0; left: 0; width: 100%; height: var(--header-height);
+    background: var(--primary-color); color: white;
+    display: flex; align-items: center; justify-content: space-between;
+    box-sizing: border-box; padding: 0 10px; z-index: 1500;
+}
+.nav-left { display: flex; align-items: center; gap: 15px; }
+.hamburger { font-size: 50px; cursor: pointer; padding: 10px; user-select: none; }
+.logo-area { display: flex; align-items: center; gap: 8px; font-weight: bold; font-size: 1.4em; }
+.logo-area img { height: 80px; /* ここにロゴ画像が入った時の高さ */ }
+
+/* 右上の人型アイコン（マイページ用） */
+.nav-right a { 
+    color: var(--primary-color); background: white; text-decoration: none; 
+    font-size: 20px; width: 36px; height: 36px; 
+    display: flex; align-items: center; justify-content: center; 
+    border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
-.menu-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 20px;
+/* 2. サイドバー（普段は画面外の左に隠す） */
+.sidebar {
+    position: fixed; top: var(--header-height); left: calc(-1 * var(--sidebar-width));
+    width: var(--sidebar-width); height: calc(100vh - var(--header-height));
+    background: #fff; box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    transition: left 0.3s ease; z-index: 999; overflow-y: auto;
+}
+/* JSでこのクラスがつくと画面に入ってくる */
+.sidebar.active { left: 0; } 
+
+.sidebar-user { padding: 15px; text-align: center; border-bottom: 1px solid #f0f0f0; background: #f8f9fa; }
+.sidebar-menu { list-style: none; padding: 0; margin: 0; }
+.sidebar-menu li a { display: block; padding: 15px 20px; color: #444; text-decoration: none; border-bottom: 1px solid #f0f0f0; transition: 0.2s; }
+.sidebar-menu li a:hover { background: #f8f9fa; color: var(--primary-color); padding-left: 25px; }
+
+/* 3. メインコンテンツエリア */
+.main-wrapper {
+    margin-top: var(--header-height); /* 上の青い帯の分だけ下げる */
+    padding: 20px; width: 100%; box-sizing: border-box;
 }
 
-.menu-card {
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-    text-decoration: none;
-    color: #333;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    transition: transform 0.2s;
-    border: 1px solid #eee;
-}
+/* 古い各ページのタイトルバーは不要になるので強制的に隠す */
+.top-bar { display: none !important; }
+.content-body { padding: 0; }
 
-.menu-card:hover {
-    transform: translateY(-5px); /* マウスを乗せると少し浮く */
-    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
-}
+/* その他共通カード・ボタンデザイン */
+.main-card { background: white; border-radius: 8px; padding: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 20px; }
+.btn-submit { background: var(--primary-color); color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+.btn-publish { background: #ffc107; color: #000; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+.btn-waive { background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+.btn-cancel { background: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
+.practice-table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 0.95em; }
+.practice-table th { background: #f8f9fa; padding: 10px; border-bottom: 2px solid #ddd; color: #555; }
+.practice-table td { padding: 12px 5px; border-bottom: 1px solid #eee; text-align: center; }
 
-.menu-card h3 {
-    margin-top: 0;
-    color: #007bff;
-}
+@media (max-width: 768px) {
+    /* 画面の端っこの余白を狭くして、コンテンツを広く使う */
+    .main-wrapper {
+        padding: 10px;
+    }
+    .main-card {
+        padding: 15px;
+    }
 
-.admin-card h3 {
-    color: #28a745; 
-}
+    /* ★超重要：テーブルが画面からはみ出すのを防ぎ、指で横にスクロールできるようにする */
+    .practice-table {
+        font-size: 0.9em; /* スマホでは文字を少しだけ小さく */
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap; /* 勝手に改行されて縦長になるのを防ぐ */
+    }
 
-/* --- トグルボタン（ワンタップ選択）のデザイン --- */
-.toggle-buttons {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
-}
-
-.toggle-buttons label {
-    cursor: pointer;
-    flex: 1; /* ボタンの幅を均等にする */
-}
-
-/* 本来の丸いラジオボタンを隠す */
-.toggle-buttons input[type="radio"] {
-    display: none;
-}
-
-/* ボタンの見た目を作る */
-.toggle-buttons span {
-    display: block;
-    text-align: center;
-    padding: 15px;
-    background: #f8f9fa;
-    border: 2px solid #ddd;
-    border-radius: 8px;
-    font-weight: bold;
-    color: #555;
-    transition: 0.2s;
-}
-
-/* 選択された（チェックされた）時のデザイン */
-.toggle-buttons input[type="radio"]:checked + span {
-    background: #007bff; /* 青色にする */
-    color: white;
-    border-color: #007bff;
+    /* スマホではヘッダーのロゴやボタンも少しコンパクトに */
+    .global-navbar {
+        padding: 0 10px;
+    }
+    .logo-area {
+        font-size: 1.1em;
+    }
+    .logo-area img {
+        height: 45px !important; /* スマホではロゴを少し小さめに調整 */
+    }
 }

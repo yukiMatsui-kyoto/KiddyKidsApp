@@ -10,7 +10,7 @@ if (!isset($_SESSION['user_id']) || $_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $user_id = $_SESSION['user_id'];
 $practice_id = $_POST['practice_id'];
-$status = $_POST['status']; // "フル", "途中", "欠席"
+$status = $_POST['status']; // "参加", "途中", "欠席" 
 
 try {
     // ① 練習日の日付を取得（8日前ペナルティの計算用）
