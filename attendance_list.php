@@ -25,6 +25,7 @@ $practices = $stmt->fetchAll();
         <header class="global-navbar">
             <div class="logo-area">
                 <span class="hamburger" onclick="document.querySelector('.sidebar').classList.toggle('active');">☰</span>
+                <img src="logo.png" alt="logo" onerror="this.style.display='none'">
                 <strong>練習参加登録</strong>
             </div>
         </header>
@@ -35,7 +36,7 @@ $practices = $stmt->fetchAll();
                         <th style="white-space: nowrap;">日程・時間</th>
                         <th style="white-space: nowrap;">コート</th>
                         <th style="white-space: nowrap;">出欠</th>
-                        <th style="white-space: nowrap;">参加予定メンバー（4種類別）</th>
+                        <th style="white-space: nowrap;">参加者</th>
                     </tr>
                     <?php foreach ($practices as $p): ?>
                     <tr>
@@ -50,8 +51,13 @@ $practices = $stmt->fetchAll();
                             $stmt->execute([$p['id'], $user_id]);
                             $my_status = $stmt->fetchColumn();
 
-                            if ($my_status && $my_status !== '欠席'): ?>
-                                <form action="submit_attendance.php" method="POST" onsubmit="return confirm('7日以内なら金額が発生します。よろしいですか？');" style="margin:0;">
+                            if ($my_status && $my_status !== '欠席'): 
+                                // 7日以内かどうかで警告文を変える
+                                $cancel_msg = ($p['days_left'] <= 7) 
+                                    ? "7日以内の練習のため、キャンセルしても参加したときと同じ金額がかかります。本当にキャンセルしますか？" 
+                                    : "本当にキャンセルしますか？";
+                            ?>
+                                <form action="submit_attendance.php" method="POST" onsubmit="return confirm('<?php echo $cancel_msg; ?>');" style="margin:0;">
                                     <input type="hidden" name="practice_id" value="<?php echo $p['id']; ?>">
                                     <input type="hidden" name="status" value="欠席">
                                     <button type="submit" class="btn-cancel" style="white-space: nowrap;">キャンセル</button>
@@ -69,33 +75,41 @@ $practices = $stmt->fetchAll();
                                 </form>
                             <?php endif; ?>
                         </td>
-                        <td style="text-align: left; min-width: 200px;">
+                        <td style="text-align: left; min-width: 150px; vertical-align: top;">
                             <?php
-                            // 参加者をステータス別に取得して分ける
-                            $s = $pdo->prepare("SELECT u.name_kana, a.status FROM practice_attendance a JOIN users u ON a.user_id = u.id WHERE a.practice_id = ? AND a.status != '欠席'");
+                            $s = $pdo->prepare("SELECT COALESCE(NULLIF(u.display_name, ''), u.name_kana) as show_name, a.status FROM practice_attendance a JOIN users u ON a.user_id = u.id WHERE a.practice_id = ? AND a.status != '欠席'");
                             $s->execute([$p['id']]);
                             $attendees = $s->fetchAll();
-
-                            $groups = ['参加' => [], '途中参' => [], 'ドタ参' => [], 'ドタ途中参' => []];
-                            foreach ($attendees as $att) {
-                                $status_key = ($att['status'] === '途中') ? '途中参' : $att['status'];
-                                if (isset($groups[$status_key])) {
-                                    $groups[$status_key][] = htmlspecialchars($att['name_kana']);
-                                }
-                            }
-
-                            $colors = ['参加' => '#4a86e8', '途中参' => '#17a2b8', 'ドタ参' => '#f39c12', 'ドタ途中参' => '#cf2f3a'];
-                            
-                            foreach ($groups as $label => $names) {
-                                if (!empty($names)) {
-                                    echo "<div style='margin-bottom: 5px;'>";
-                                    echo "<strong style='color: {$colors[$label]}; font-size: 0.8em;'>【{$label}】</strong>";
-                                    echo "<span style='font-size: 0.85em; color: #333;'> " . implode(', ', $names) . "</span>";
-                                    echo "</div>";
-                                }
-                            }
-                            if (empty($attendees)) echo "<span style='color:#ccc; font-size:0.8em;'>まだいません</span>";
+                            $total_attendees = count($attendees);
                             ?>
+                            
+                            <button type="button" onclick="toggleParticipants('part-<?php echo $p['id']; ?>')" style="background:#f0f2f5; color:#333; border:1px solid #ccc; padding:6px 12px; border-radius:20px; font-size:0.85em; cursor:pointer; font-weight:bold; white-space:nowrap;">
+                                👥 参加者 (<?php echo $total_attendees; ?>名) ▾
+                            </button>
+
+                            <div id="part-<?php echo $p['id']; ?>" style="display:none; margin-top:10px; background:#fdfdfd; padding:10px; border-radius:8px; border:1px solid #eee; white-space:normal;">
+                                <?php
+                                $groups = ['参加' => [], '途中参' => [], 'ドタ参' => [], 'ドタ途中参' => []];
+                                foreach ($attendees as $att) {
+                                    $status_key = ($att['status'] === '途中') ? '途中参' : $att['status'];
+                                    if (isset($groups[$status_key])) {
+                                        $groups[$status_key][] = htmlspecialchars($att['show_name']);
+                                    }
+                                }
+
+                                $colors = ['参加' => '#4a86e8', '途中参' => '#17a2b8', 'ドタ参' => '#f39c12', 'ドタ途中参' => '#cf2f3a'];
+                                
+                                foreach ($groups as $label => $names) {
+                                    if (!empty($names)) {
+                                        echo "<div style='margin-bottom: 8px;'>";
+                                        echo "<strong style='color: {$colors[$label]}; font-size: 0.8em; display:block; border-bottom:1px solid #eee; padding-bottom:2px; margin-bottom:3px;'>【{$label}】</strong>";
+                                        echo "<span style='font-size: 0.85em; color: #444; line-height:1.4;'> " . implode(', ', $names) . "</span>";
+                                        echo "</div>";
+                                    }
+                                }
+                                if (empty($attendees)) echo "<span style='color:#999; font-size:0.8em;'>まだ登録者がいません</span>";
+                                ?>
+                            </div>
                         </td>
                     </tr>
                     <?php endforeach; ?>
@@ -103,5 +117,16 @@ $practices = $stmt->fetchAll();
             </div>
         </main>
     </div>
+
+    <script>
+    function toggleParticipants(id) {
+        var el = document.getElementById(id);
+        if (el.style.display === "none") {
+            el.style.display = "block";
+        } else {
+            el.style.display = "none";
+        }
+    }
+    </script>
 </body>
 </html>
