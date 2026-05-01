@@ -15,8 +15,9 @@ $practices = $stmt->fetchAll();
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>参加登録</title>
-    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>参加登録 - FreshTSystem</title>
+    <link rel="stylesheet" href="style.css?v=<?php echo filemtime('style.css'); ?>">
 </head>
 <body>
     <?php include 'sidebar.php'; ?>
@@ -31,15 +32,18 @@ $practices = $stmt->fetchAll();
             <div class="main-card">
                 <table class="practice-table" style="display:block; overflow-x:auto;">
                     <tr>
-                        <th>日程</th>
-                        <th>会場</th>
-                        <th>出欠</th>
-                        <th>参加者</th>
+                        <th style="white-space: nowrap;">日程・時間</th>
+                        <th style="white-space: nowrap;">コート</th>
+                        <th style="white-space: nowrap;">出欠</th>
+                        <th style="white-space: nowrap;">参加予定メンバー（4種類別）</th>
                     </tr>
                     <?php foreach ($practices as $p): ?>
                     <tr>
-                        <td><?php echo date('n/j', strtotime($p['practice_date'])); ?></td>
-                        <td><?php echo htmlspecialchars($p['location']); ?></td>
+                        <td style="white-space: nowrap;">
+                            <strong><?php echo date('n/j', strtotime($p['practice_date'])); ?></strong><br>
+                            <span style="font-size: 0.85em; color: #666;"><?php echo date('H:i', strtotime($p['start_time'])); ?> - <?php echo date('H:i', strtotime($p['end_time'])); ?></span>
+                        </td>
+                        <td style="white-space: nowrap;"><?php echo htmlspecialchars($p['location']); ?></td>
                         <td>
                             <?php
                             $stmt = $pdo->prepare("SELECT status FROM practice_attendance WHERE practice_id = ? AND user_id = ?");
@@ -47,20 +51,20 @@ $practices = $stmt->fetchAll();
                             $my_status = $stmt->fetchColumn();
 
                             if ($my_status && $my_status !== '欠席'): ?>
-                                <form action="submit_attendance.php" method="POST" onsubmit="return confirm('7日以内なら金額が発生します。よろしいですか？');">
+                                <form action="submit_attendance.php" method="POST" onsubmit="return confirm('7日以内なら金額が発生します。よろしいですか？');" style="margin:0;">
                                     <input type="hidden" name="practice_id" value="<?php echo $p['id']; ?>">
                                     <input type="hidden" name="status" value="欠席">
-                                    <button type="submit" class="btn-cancel">キャンセル</button>
+                                    <button type="submit" class="btn-cancel" style="white-space: nowrap;">キャンセル</button>
                                 </form>
                             <?php else: ?>
-                                <form action="submit_attendance.php" method="POST" style="display:flex; gap:5px;">
+                                <form action="submit_attendance.php" method="POST" style="display:flex; gap:5px; margin:0;">
                                     <input type="hidden" name="practice_id" value="<?php echo $p['id']; ?>">
                                     <?php if ($p['days_left'] <= 7): ?>
-                                        <button type="submit" name="status" value="ドタ参" style="background:#f39c12; color:white; border:none; padding:6px; border-radius:4px;">ドタ参</button>
-                                        <button type="submit" name="status" value="ドタ途中参" style="background:#cf2f3a; color:white; border:none; padding:6px; border-radius:4px;">ドタ途中</button>
+                                        <button type="submit" name="status" value="ドタ参" style="background:#f39c12; color:white; border:none; padding:6px; border-radius:4px; white-space:nowrap;">ドタ参</button>
+                                        <button type="submit" name="status" value="ドタ途中参" style="background:#cf2f3a; color:white; border:none; padding:6px; border-radius:4px; white-space:nowrap;">ドタ途中</button>
                                     <?php else: ?>
-                                        <button type="submit" name="status" value="参加" class="btn-submit">参加</button>
-                                        <button type="submit" name="status" value="途中参" style="background:#17a2b8; color:white; border:none; padding:6px; border-radius:4px;">途中参</button>
+                                        <button type="submit" name="status" value="参加" class="btn-submit" style="padding:6px 12px; white-space:nowrap;">参加</button>
+                                        <button type="submit" name="status" value="途中参" style="background:#17a2b8; color:white; border:none; padding:6px 12px; border-radius:4px; white-space:nowrap;">途中参</button>
                                     <?php endif; ?>
                                 </form>
                             <?php endif; ?>
