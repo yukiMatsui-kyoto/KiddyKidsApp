@@ -1,6 +1,6 @@
 <aside class="sidebar">
     <ul class="sidebar-menu">
-        <li><a href="top.php">ホーム</a></li>
+        <li><a href="top.php">TOP</a></li>
         <li><a href="attendance_list.php">練習参加登録</a></li>
         <li><a href="mypage.php">マイページ</a></li>
 

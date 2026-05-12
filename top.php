@@ -37,7 +37,7 @@ if ($next_practice) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ホーム - FreshTSystem</title>
+    <title>TOP - KiddyKiddsFreshers</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -47,7 +47,7 @@ if ($next_practice) {
             <div class="logo-area">
                 <span class="hamburger" onclick="document.querySelector('.sidebar').classList.toggle('active');">☰</span>
                 <img src="logo.png" alt="logo" onerror="this.style.display='none'">    
-                <strong>ホーム</strong>
+                <strong>TOP</strong>
             </div>
         </header>
         <main class="content-body">

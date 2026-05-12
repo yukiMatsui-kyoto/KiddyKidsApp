@@ -3,13 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FreshTSystem - ログイン</title>
+    <title>KiddyKiddsFreshers - ログイン</title>
     <link rel="stylesheet" href="style.css?v=<?php echo filemtime('style.css'); ?>">
 </head>
 <body>
     <div class="login-wrapper">
         <div class="login-box">
-            <h1>FreshTSystem<br>ログイン</h1>
+            <div class="login_logo-area">
+                <img src="login_logo.png" alt="logo" onerror="this.style.display='none'">
+            </div>
+
+            <h1>KiddyKiddsFreshers<br>ログイン</h1>
             <p>代と、フルネーム（ひらがな）を入力してください</p>
             
             <form action="login_action.php" method="POST">
