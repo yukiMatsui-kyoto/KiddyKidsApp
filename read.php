@@ -1,15 +1,15 @@
+<?php
+session_start();
+require_once 'db.php';
 if (!isset($_SESSION['user_id'])) { header('Location: login.php'); exit; }
-$user_id = $_SESSION['user_id'];
-$now_jst = date('Y-m-d H:i:s');
-
-
+?>
 <!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>概要・問い合わせ - FreshTSystem</title>
-    <link rel="stylesheet" href="style.css">
+    <title>概要・問い合わせ </title>
+    <link rel="stylesheet" href="style.css?v=<?php echo filemtime('style.css'); ?>">
 </head>
 <body>
     <?php include 'sidebar.php'; ?>
@@ -18,32 +18,38 @@ $now_jst = date('Y-m-d H:i:s');
             <div class="logo-area">
                 <span class="hamburger" onclick="document.querySelector('.sidebar').classList.toggle('active');">☰</span>
                 <img src="logo.png" alt="logo" onerror="this.style.display='none'">    
-                <strong>ホーム</strong>
+                <strong>概要・問い合わせ</strong>
             </div>
         </header>
         <main class="content-body">
-            
             <div class="main-card">
-                <h3 style="color: #4a86e8; margin-top:0;">あなたの参加予定</h3>
-                <?php if (count($my_upcoming_practices) > 0): ?>
-                    <ul style="list-style: none; padding: 0;">
-                        <?php foreach ($my_upcoming_practices as $p): ?>
-                            <li style="padding: 15px; border-bottom: 1px solid #eee; margin-bottom: 10px; background: #fdfdfd; border-radius: 8px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center;">
-                                    <div>
-                                        <strong style="font-size: 1.1em;"><?php echo date('n/j', strtotime($p['practice_date'])); ?> (<?php echo htmlspecialchars($p['location']); ?>)</strong><br>
-                                        <span style="color: #666; font-size: 0.85em;"><?php echo date('H:i', strtotime($p['start_time'])); ?> - <?php echo date('H:i', strtotime($p['end_time'])); ?></span><br>
-                                        <span style="display:inline-block; margin-top:5px; padding:2px 8px; background:#e2e8f0; border-radius:12px; font-size:0.8em;"><?php echo $p['status']; ?></span>
-                                    </div>
-                                    <div style="font-weight: bold; font-size: 1.2em; <?php echo ($p['days_left'] <= 7) ? 'color: #dc3545;' : 'color: #28a745;'; ?>">
-                                        <?php if($p['days_left'] == 0) echo "本日！"; else echo "あと " . $p['days_left'] . " 日"; ?>
-                                    </div>
-                                </div>
-                            </li>
-                        <?php endforeach; ?>
-                    </ul>
-                <?php else: ?>
-                    <p style="color:#666;">現在、参加予定の練習はありません。</p>
-                <?php endif; ?>
-                <a href="attendance_list.php" class="btn-submit" style="display:block; text-align:center; margin-top:20px; text-decoration:none;">出欠を入力・変更する</a>
+                <h3 style="margin-top:0;">システム概要</h3>
+                <p style="line-height: 1.6; color: #444;">
+                    KiddyKiddsのフレ団用の練習参加登録や会計管理を行うためのシステムです。<br><br>
+                    機能は以下の通りです。<br>
+                    ・練習参加登録：練習ごとに参加・欠席などのステータスを登録できます。<br>
+                    ・マイページ：過去の参加履歴や会計情報を確認できます。フレ団終了後まで金額は確認できません。
+                    管理画面にログインできる上回生にきいてもらえると教えます。<br>
+                    ・管理者機能：練習の追加・編集、ユーザー管理、会計集計などが行えます。
+                </p>
             </div>
+
+            <div class="main-card">
+                <h3 style="margin-top:0;">問い合わせ</h3>
+                <p style="line-height: 1.6; color: #444;">
+                    システムに関する不具合はまついゆうき、練習に関する質問はつばさに
+                </p>
+            </div>
+
+            <div class="main-card">
+                <h3 style="margin-top:0;">開発リポジトリ</h3>
+                <p style="line-height: 1.6; color: #444;">
+                    <a href="https://github.com/yukiMatsui-kyoto/KiddyKidsApp" target="_blank" style="color: #4a86e8; text-decoration: none; font-weight: bold; border-bottom: 1px solid #4a86e8;">
+                        GitHubでリポジトリを見る
+                    </a>
+                </p>
+            </div>
+        </main>
+    </div>
+</body>
+</html>
