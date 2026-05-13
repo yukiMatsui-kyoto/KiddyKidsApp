@@ -5,20 +5,14 @@ require_once 'db.php';
 if (!isset($_SESSION['user_id'])) { header('Location: login.php'); exit; }
 if (!isset($_SESSION['is_admin'])) { header('Location: admin_login.php'); exit; }
 
-// すべての練習を取得
 $stmt = $pdo->query("SELECT * FROM practices ORDER BY practice_date DESC, start_time DESC");
 $all_practices = $stmt->fetchAll();
 
-$upcoming = [];
-$past = [];
+$upcoming = []; $past = [];
 $now = date('Y-m-d H:i:s');
-
 foreach ($all_practices as $p) {
-    if (strtotime($p['practice_date'] . ' ' . $p['end_time']) >= strtotime($now)) {
-        $upcoming[] = $p;
-    } else {
-        $past[] = $p;
-    }
+    if (strtotime($p['practice_date'] . ' ' . $p['end_time']) >= strtotime($now)) { $upcoming[] = $p; } 
+    else { $past[] = $p; }
 }
 ?>
 <!DOCTYPE html>
@@ -26,26 +20,18 @@ foreach ($all_practices as $p) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>管理画面 - FreshTSystem</title>
+    <title>管理画面</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <?php include 'sidebar.php'; ?>
     <div class="main-wrapper">
-        <header class="global-navbar">
-            <div class="logo-area">
-                <span class="hamburger" onclick="document.querySelector('.sidebar').classList.toggle('active');">☰</span>
-                <img src="logo.png" alt="logo" onerror="this.style.display='none'">    
-                <strong>管理画面</strong>
-            </div>
-        </header>
-
+        <header class="global-navbar"><div class="logo-area"><span class="hamburger" onclick="document.querySelector('.sidebar').classList.toggle('active');">☰</span><strong>練習管理</strong></div></header>
         <main class="content-body">
             <div class="main-card">
-                <h3 style="margin-top:0;">練習の追加</h3>
+                <h3 style="margin-top:0;">＋新しい練習を追加する</h3>
                 <form action="add_practice.php" method="POST" enctype="multipart/form-data">
-                    <p>日付</p>
-                    <input type="date" name="practice_date" required style="padding:10px;">
+                    <p>日付</p><input type="date" name="practice_date" required style="padding:10px;">
                     <p>時間帯</p>
                     <div style="margin-bottom:10px;">
                         <input type="radio" name="time_preset" value="daytime" required onchange="toggleCustomInput()"> 16:00 - 18:00
@@ -53,7 +39,7 @@ foreach ($all_practices as $p) {
                         <input type="radio" name="time_preset" value="custom" onchange="toggleCustomInput()"> その他
                     </div>
                     <div id="custom_time_area" style="display: none; padding: 10px; background: #f8f9fa;">
-                        開始：<input type="time" name="custom_start_time"> 終了：<input type="time" name="custom_end_time">
+                        開始：<input type="time" name="custom_start_time" id="custom_start_time"> 終了：<input type="time" name="custom_end_time" id="custom_end_time">
                     </div>
                     <p>コート</p>
                     <div style="margin-bottom:10px;">
@@ -62,57 +48,32 @@ foreach ($all_practices as $p) {
                         <input type="radio" name="location_preset" value="custom" onchange="toggleCustomInput()"> その他
                     </div>
                     <div id="custom_location_area" style="display: none; padding: 10px; background: #f8f9fa;">
-                        <input type="text" name="custom_location" placeholder="会場名を入力">
+                        <input type="text" name="custom_location" id="custom_location" placeholder="会場名を入力">
                     </div>
-                    <p>場所代（円）</p>
+                    
+                    <p>コート代（円）</p>
                     <input type="number" name="facility_fee" value="5000" required style="padding:10px;">
+                    
                     <p>会場使用許可証（任意）</p>
-                    <input type="file" name="permit_file" accept=".jpg,.jpeg,.png,.pdf" style="padding:10px;">
-                    <br><br>
+                    <input type="file" name="permit_file" accept=".jpg,.jpeg,.png,.pdf" style="padding:10px;"><br><br>
                     <button type="submit" class="btn-submit">予定を追加する</button>
                 </form>
             </div>
-
             <div class="main-card">
-                <h3>今後の練習予定</h3>
+                <h3>練習一覧</h3>
                 <table class="practice-table">
                     <tr><th>日付</th><th>会場</th><th>操作</th></tr>
-                    <?php foreach ($upcoming as $p): ?>
-                    <tr style="<?php if($p['is_cancelled']) echo 'background:#ffeeba;'; ?>">
-                        <td><?php echo date('n/j', strtotime($p['practice_date'])); ?></td>
-                        <td><?php echo htmlspecialchars($p['location']); ?></td>
-                        <td>
-                            <a href="admin_roster.php?id=<?php echo $p['id']; ?>" class="btn-waive" style="text-decoration:none;">詳細・編集</a>
-                            <?php if (!empty($p['permit_path'])): ?>
-                                <a href="uploads/<?php echo htmlspecialchars($p['permit_path']); ?>" target="_blank" class="btn-submit" style="padding:5px; font-size:0.8em; text-decoration:none;">許可証</a>
-                            <?php endif; ?>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                </table>
-
-                <h3 style="margin-top:40px; color:#666;">過去の練習履歴</h3>
-                <table class="practice-table">
-                    <tr><th>日付</th><th>会場</th><th>操作</th></tr>
-                    <?php foreach ($past as $p): ?>
-                    <tr style="background:#f9f9f9; <?php if($p['is_cancelled']) echo 'background:#ffeeba;'; ?>">
-                        <td><?php echo date('n/j', strtotime($p['practice_date'])); ?></td>
-                        <td><?php echo htmlspecialchars($p['location']); ?></td>
-                        <td>
-                            <a href="admin_roster.php?id=<?php echo $p['id']; ?>" class="btn-waive" style="background:#6c757d; text-decoration:none;">詳細・編集</a>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
+                    <?php foreach ($upcoming as $p): ?><tr style="<?php if($p['is_cancelled']) echo 'background:#ffeeba;'; ?>"><td><?php echo date('n/j', strtotime($p['practice_date'])); ?></td><td><?php echo htmlspecialchars($p['location']); ?></td><td><a href="admin_roster.php?id=<?php echo $p['id']; ?>" class="btn-waive" style="text-decoration:none;">詳細・編集</a></td></tr><?php endforeach; ?>
                 </table>
             </div>
         </main>
     </div>
     <script>
     function toggleCustomInput() {
-        const timePreset = document.querySelector('input[name="time_preset"]:checked');
-        document.getElementById('custom_time_area').style.display = (timePreset && timePreset.value === 'custom') ? 'block' : 'none';
-        const locPreset = document.querySelector('input[name="location_preset"]:checked');
-        document.getElementById('custom_location_area').style.display = (locPreset && locPreset.value === 'custom') ? 'block' : 'none';
+        const t = document.querySelector('input[name="time_preset"]:checked');
+        document.getElementById('custom_time_area').style.display = (t && t.value === 'custom') ? 'block' : 'none';
+        const l = document.querySelector('input[name="location_preset"]:checked');
+        document.getElementById('custom_location_area').style.display = (l && l.value === 'custom') ? 'block' : 'none';
     }
     </script>
 </body>

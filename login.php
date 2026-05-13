@@ -14,7 +14,10 @@
             </div>
 
             <h1>KiddyKiddsFreshers<br>ログイン</h1>
-            <p>代と、フルネーム（ひらがな）を入力してください</p>
+            <p>代と、フルネーム（ひらがな）を入力してﾈ</p>
+            <p style="font-size: 0.85em; color: #e74c3c; margin-top: 0; margin-bottom: 25px; font-weight: bold;">
+                ※お手伝いは代に「0」を入力してください
+            </p>
             
             <form action="login_action.php" method="POST">
                 <div class="input-group">
