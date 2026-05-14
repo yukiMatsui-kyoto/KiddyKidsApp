@@ -1,3 +1,29 @@
+<?php
+session_start();
+require_once 'db.php';
+
+// 自動ログイン処理
+if (!isset($_SESSION['user_id']) && isset($_COOKIE['kiddy_auto_login'])) {
+    $user_id = $_COOKIE['kiddy_auto_login'];
+    $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
+    $stmt->execute([$user_id]);
+    $user = $stmt->fetch();
+    
+    if ($user) {
+        $_SESSION['user_id'] = $user['id'];
+        $_SESSION['generation'] = $user['generation'];
+        $_SESSION['name_kana'] = $user['name_kana'];
+        header('Location: top.php');
+        exit;
+    }
+}
+
+// すでに通常のログイン状態の場合
+if (isset($_SESSION['user_id'])) {
+    header('Location: top.php');
+    exit;
+}
+?>
 <!DOCTYPE html>
 <html lang="ja">
 <head>
