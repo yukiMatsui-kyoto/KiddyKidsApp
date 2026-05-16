@@ -75,7 +75,14 @@ $practices = $stmt->fetchAll();
                             $s = $pdo->prepare("SELECT COALESCE(NULLIF(u.display_name, ''), u.name_kana) as show_name, a.status, u.generation, u.id as uid FROM practice_attendance a JOIN users u ON a.user_id = u.id WHERE a.practice_id = ? AND a.status != '欠席'");
                             $s->execute([$p['id']]);
                             $attendees = $s->fetchAll();
-                            $total_attendees = count($attendees);
+                            
+                            // お手伝い（0代）を除外して参加人数をカウント
+                            $total_attendees = 0;
+                            foreach ($attendees as $att) {
+                                if ($att['generation'] != 0) {
+                                    $total_attendees++;
+                                }
+                            }
 
                             // 役割（運搬・仕切り）を取得
                             $r_stmt = $pdo->prepare("SELECT user_id, role_type FROM practice_roles WHERE practice_id = ?");
@@ -95,7 +102,6 @@ $practices = $stmt->fetchAll();
                                     $status_key = ($att['status'] === '途中' || $att['status'] === '途中参') ? '途中参' : $att['status'];
                                     $target_group = ($att['generation'] == 0) ? 'お手伝い' : $status_key;
                                     
-                                    // ★名前に役割タグを追加
                                     $name_disp = htmlspecialchars($att['show_name']);
                                     if (isset($role_map[$att['uid']])) {
                                         $name_disp .= " <span style='font-size:0.85em; color:#666; font-weight:normal;'>(" . implode('・', $role_map[$att['uid']]) . ")</span>";
