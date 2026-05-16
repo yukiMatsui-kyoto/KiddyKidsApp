@@ -44,14 +44,21 @@ $practices = $pdo->query("SELECT * FROM practices ORDER BY practice_date DESC")-
 
             <div class="main-card">
                 <h3>コートカード チャージ設定</h3>
-                <table class="practice-table">
-                    <thead><tr><th>日付</th><th>場所</th><th>コート代</th><th>立替者を選択</th></tr></thead>
+                <table class="practice-table" style="display:block; overflow-x:auto; white-space:nowrap;">
+                    <thead><tr><th>日付</th><th>場所</th><th>コート代</th><th>許可証(画像)</th><th>立替者を選択</th></tr></thead>
                     <tbody>
                         <?php foreach ($practices as $p): ?>
                         <tr>
-                            <td><?php echo $p['practice_date']; ?></td>
+                            <td><?php echo date('n/j', strtotime($p['practice_date'])); ?></td>
                             <td><?php echo htmlspecialchars($p['location']); ?></td>
                             <td>¥<?php echo number_format($p['facility_fee']); ?></td>
+                            <td>
+                                <?php if (!empty($p['permit_path'])): ?>
+                                    <a href="uploads/<?php echo htmlspecialchars($p['permit_path']); ?>" target="_blank" style="color: #0056b3; font-weight: bold; text-decoration: underline;">確認する</a>
+                                <?php else: ?>
+                                    <span style="color: #ccc; font-size: 0.85em;">なし</span>
+                                <?php endif; ?>
+                            </td>
                             <td>
                                 <form method="POST" style="display:flex; gap:5px;">
                                     <input type="hidden" name="practice_id" value="<?php echo $p['id']; ?>">

@@ -54,16 +54,25 @@ foreach ($all_practices as $p) {
                     <p>コート代（円）</p>
                     <input type="number" name="facility_fee" value="5000" required style="padding:10px;">
                     
-                    <p>会場使用許可証（任意）</p>
+                    <p>使用許可証（任意）</p>
                     <input type="file" name="permit_file" accept=".jpg,.jpeg,.png,.pdf" style="padding:10px;"><br><br>
                     <button type="submit" class="btn-submit">予定を追加する</button>
                 </form>
             </div>
+            
             <div class="main-card">
-                <h3>練習一覧</h3>
+                <h3>今後の練習一覧</h3>
                 <table class="practice-table">
                     <tr><th>日付</th><th>会場</th><th>操作</th></tr>
                     <?php foreach ($upcoming as $p): ?><tr style="<?php if($p['is_cancelled']) echo 'background:#ffeeba;'; ?>"><td><?php echo date('n/j', strtotime($p['practice_date'])); ?></td><td><?php echo htmlspecialchars($p['location']); ?></td><td><a href="admin_roster.php?id=<?php echo $p['id']; ?>" class="btn-waive" style="text-decoration:none;">詳細・編集</a></td></tr><?php endforeach; ?>
+                </table>
+            </div>
+
+            <div class="main-card" style="background: #fdfdfd;">
+                <h3>過去の練習の表示・編集</h3>
+                <table class="practice-table">
+                    <tr><th>日付</th><th>会場</th><th>操作</th></tr>
+                    <?php foreach ($past as $p): ?><tr style="<?php if($p['is_cancelled']) echo 'background:#ffeeba;'; ?>"><td style="color: #777;"><?php echo date('n/j', strtotime($p['practice_date'])); ?></td><td style="color: #777;"><?php echo htmlspecialchars($p['location']); ?></td><td><a href="admin_roster.php?id=<?php echo $p['id']; ?>" class="btn-waive" style="text-decoration:none; background:#6c757d;">詳細・編集</a></td></tr><?php endforeach; ?>
                 </table>
             </div>
         </main>

@@ -9,14 +9,6 @@ if (!isset($_SESSION['is_admin'])) { header('Location: admin_login.php'); exit; 
 $practice_id = $_GET['id'] ?? null;
 if (!$practice_id) { header('Location: admin.php'); exit; }
 
-// --- データベース自動拡張 ---
-try {
-    $pdo->exec("CREATE TABLE IF NOT EXISTS practice_roles (practice_id INT, user_id INT, role_type VARCHAR(50), PRIMARY KEY(practice_id, user_id, role_type)) DEFAULT CHARSET=utf8mb4");
-    $pdo->exec("ALTER TABLE practice_roles CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
-    $pdo->exec("ALTER TABLE practice_attendance ADD COLUMN override_weight FLOAT DEFAULT NULL");
-    $pdo->exec("ALTER TABLE practice_attendance ADD COLUMN override_hours FLOAT DEFAULT NULL");
-} catch (PDOException $e) {}
-
 // --- 更新処理の受付 ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['update_details'])) {
@@ -117,7 +109,26 @@ $all_users = $pdo->query("SELECT id, name_kana, generation FROM users ORDER BY g
                     コート代: <input type="number" name="facility_fee" value="<?php echo $p['facility_fee']; ?>"> 円<br>
                     <button type="submit" class="btn-submit" style="margin-top:10px;">基本情報を保存</button>
                 </form>
-                <form method="POST" action="admin_roster.php?id=<?php echo htmlspecialchars($practice_id); ?>" style="margin-top:10px;" onsubmit="return confirm('この練習を中止しますか？');">
+                
+                <div style="margin-top: 20px; padding-top: 15px; border-top: 1px dashed #ccc;">
+                    <p style="font-weight: bold; margin-bottom: 8px;">アップロード済みの許可証</p>
+                    <?php if (!empty($p['permit_path'])): ?>
+                        <?php 
+                        $ext = strtolower(pathinfo($p['permit_path'], PATHINFO_EXTENSION));
+                        $file_url = 'uploads/' . htmlspecialchars($p['permit_path']);
+                        if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif'])): ?>
+                            <img src="<?php echo $file_url; ?>" alt="コートカード" style="max-width: 100%; max-height: 400px; border: 1px solid #ddd; border-radius: 4px;">
+                            <br>
+                            <a href="<?php echo $file_url; ?>" target="_blank" style="display: inline-block; margin-top: 8px; font-size: 0.9em; color: #0056b3; text-decoration: underline;">拡大して見る(別タブ)</a>
+                        <?php else: ?>
+                            <a href="<?php echo $file_url; ?>" target="_blank" class="btn-submit" style="background:#17a2b8; text-decoration:none; display:inline-block;">許可証（PDF等）を開く</a>
+                        <?php endif; ?>
+                    <?php else: ?>
+                        <p style="color: #999; font-size: 0.9em;">※ファイルはアップロードされていません。</p>
+                    <?php endif; ?>
+                </div>
+
+                <form method="POST" action="admin_roster.php?id=<?php echo htmlspecialchars($practice_id); ?>" style="margin-top:20px;" onsubmit="return confirm('この練習を中止しますか？');">
                     <button type="submit" name="cancel_practice" class="btn-cancel">練習を中止（キャンセル）にする</button>
                 </form>
             </div>
@@ -128,13 +139,7 @@ $all_users = $pdo->query("SELECT id, name_kana, generation FROM users ORDER BY g
                 <form method="POST" action="admin_roster.php?id=<?php echo htmlspecialchars($practice_id); ?>">
                     <table class="practice-table" style="display:block; overflow-x:auto; white-space:nowrap;">
                         <thead>
-                            <tr>
-                                <th>名前</th>
-                                <th>出欠</th>
-                                <th>手動調整 (割合/時間)</th>
-                                <th>役割</th>
-                                <th>操作</th>
-                            </tr>
+                            <tr><th>名前</th><th>出欠</th><th>手動調整 (割合/時間)</th><th>役割</th><th>操作</th></tr>
                         </thead>
                         <tbody>
                             <?php foreach ($attendees as $m): ?>
@@ -142,7 +147,7 @@ $all_users = $pdo->query("SELECT id, name_kana, generation FROM users ORDER BY g
                                 <td>
                                     <strong><?php echo htmlspecialchars($m['name_kana']); ?></strong><br>
                                     <span style="font-size:0.8em; color:#888;">
-                                        <?php echo ($m['generation'] == 0) ? 'OB/お手伝い' : $m['generation'] . '代'; ?>
+                                        <?php echo ($m['generation'] == 0) ? 'お手伝い' : $m['generation'] . '代'; ?>
                                     </span>
                                 </td>
                                 <td>
