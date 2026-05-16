@@ -56,6 +56,11 @@ if (isset($_SESSION['user_id'])) {
                     <input type="text" name="name_kana" placeholder="例：なかがわしんじ" required>
                 </div>
                 
+                <label style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 20px; font-size: 0.9em; color: #555; cursor: pointer;">
+                    <input type="checkbox" name="remember" value="1" checked style="width: 18px; height: 18px; margin: 0; cursor: pointer;">
+                    ログイン状態を30日間保持する
+                </label>
+                
                 <button type="submit">ログイン</button>
             </form>
         </div>

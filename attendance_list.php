@@ -77,7 +77,7 @@ $practices = $stmt->fetchAll();
                             $attendees = $s->fetchAll();
                             $total_attendees = count($attendees);
 
-                            // ★役割（運搬・仕切り）を取得
+                            // 役割（運搬・仕切り）を取得
                             $r_stmt = $pdo->prepare("SELECT user_id, role_type FROM practice_roles WHERE practice_id = ?");
                             $r_stmt->execute([$p['id']]);
                             $role_map = [];

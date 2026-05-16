@@ -90,7 +90,7 @@ $all_users = $pdo->query("SELECT id, name_kana, generation FROM users ORDER BY g
                     <p>金額（円）</p>
                     <input type="number" name="amount" required style="padding:10px; margin-bottom:10px;">
                     <p>メモ（何のお金か）</p>
-                    <input type="text" name="description" required placeholder="例：春合宿の車代、5月分ボール購入" style="padding:10px; width:80%; margin-bottom:10px;"><br><br>
+                    <input type="text" name="description" required placeholder="例：車代、ボール購入" style="padding:10px; width:80%; margin-bottom:10px;"><br><br>
                     <button type="submit" class="btn-submit">追加する</button>
                 </form>
             </div>
