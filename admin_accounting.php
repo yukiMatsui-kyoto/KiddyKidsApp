@@ -3,6 +3,12 @@ session_start();
 require_once 'db.php';
 if (!isset($_SESSION['is_admin'])) { header('Location: admin_login.php'); exit; }
 
+// データベース自動拡張（立替用の枠を追加）
+try {
+    $pdo->exec("ALTER TABLE practices ADD COLUMN booked_by INT DEFAULT NULL");
+    $pdo->exec("ALTER TABLE global_expenses ADD COLUMN paid_by INT DEFAULT NULL");
+} catch (PDOException $e) {}
+
 if (isset($_POST['delete_user_id'])) {
     $del_id = $_POST['delete_user_id'];
     $pdo->prepare("DELETE FROM practice_attendance WHERE user_id = ?")->execute([$del_id]);
@@ -25,7 +31,6 @@ function getPracticeStats($practice, $attendees) {
     foreach ($attendees as $a) {
         $st = $a['status']; $pen = $a['is_penalty'] ?? 0; $w = 0; $h = 0;
         
-        // 0代は強制的に負担なし
         if ($a['generation'] == 0) {
             $w = 0; $h = 0;
         } else {
@@ -37,7 +42,6 @@ function getPracticeStats($practice, $attendees) {
             } elseif ($st === 'お手伝い') { $w = 0; $h = 0; }
         }
         
-        // 手動オーバーライドがあれば上書き
         if (isset($a['override_weight']) && $a['override_weight'] !== null) $w = (float)$a['override_weight'];
         if (isset($a['override_hours']) && $a['override_hours'] !== null) $h = (float)$a['override_hours'];
 
@@ -47,11 +51,16 @@ function getPracticeStats($practice, $attendees) {
     return ['total_weight' => $total_weight, 'total_hours' => $total_hours, 'user_stats' => $user_stats];
 }
 
-$user_court_fee = []; $user_misc_fee = []; $user_hours = [];
-foreach ($users as $u) { $user_court_fee[$u['id']] = 0; $user_misc_fee[$u['id']] = 0; $user_hours[$u['id']] = 0; }
+$user_court_fee = []; $user_misc_fee = []; $user_hours = []; $user_advance = [];
+foreach ($users as $u) { $user_court_fee[$u['id']] = 0; $user_misc_fee[$u['id']] = 0; $user_hours[$u['id']] = 0; $user_advance[$u['id']] = 0; }
 $all_users_total_hours = 0;
 
 foreach ($practices as $p) {
+    // コート代の立替
+    if (!empty($p['booked_by']) && isset($user_advance[$p['booked_by']])) {
+        $user_advance[$p['booked_by']] += $p['facility_fee'];
+    }
+
     $atts = $pdo->prepare("SELECT u.generation, a.user_id, a.status, a.is_penalty, a.override_weight, a.override_hours FROM practice_attendance a JOIN users u ON a.user_id = u.id WHERE a.practice_id = ?"); 
     $atts->execute([$p['id']]); $attendees = $atts->fetchAll();
     $stats = getPracticeStats($p, $attendees);
@@ -67,7 +76,13 @@ $total_ball_fee = $pdo->query("SELECT SUM(amount) FROM global_expenses WHERE exp
 $misc_expenses = $pdo->query("SELECT * FROM global_expenses WHERE expense_type = 'misc'")->fetchAll();
 
 foreach ($misc_expenses as $exp) {
-    $stmt = $pdo->prepare("SELECT p.user_id FROM global_expense_payers p JOIN users u ON p.user_id = u.id WHERE p.expense_id = ? AND u.generation != 0");
+    // ★雑費の立替をカウント
+    if (!empty($exp['paid_by']) && isset($user_advance[$exp['paid_by']])) {
+        $user_advance[$exp['paid_by']] += $exp['amount'];
+    }
+
+    //フレ以外も割り勘の対象にする（u.generation != 0 を削除）
+    $stmt = $pdo->prepare("SELECT p.user_id FROM global_expense_payers p JOIN users u ON p.user_id = u.id WHERE p.expense_id = ?");
     $stmt->execute([$exp['id']]);
     $valid_payer_ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
     
@@ -77,12 +92,21 @@ foreach ($misc_expenses as $exp) {
     }
 }
 
+// ボール代の立替
+$ball_expenses = $pdo->query("SELECT * FROM global_expenses WHERE expense_type = 'ball'")->fetchAll();
+foreach ($ball_expenses as $exp) {
+    if (!empty($exp['paid_by']) && isset($user_advance[$exp['paid_by']])) {
+        $user_advance[$exp['paid_by']] += $exp['amount'];
+    }
+}
+
 $user_totals = []; $user_ball_fee = [];
 foreach ($users as $u) {
     $uid = $u['id'];
     $b_fee = ($all_users_total_hours > 0) ? ($total_ball_fee * ($user_hours[$uid] / $all_users_total_hours)) : 0;
     $user_ball_fee[$uid] = $b_fee;
-    $user_totals[$uid] = round($user_court_fee[$uid]) + round($b_fee) + round($user_misc_fee[$uid]);
+    // 合計 ＝ 負担分 － 立替分
+    $user_totals[$uid] = round($user_court_fee[$uid]) + round($b_fee) + round($user_misc_fee[$uid]) - round($user_advance[$uid]);
 }
 ?>
 <!DOCTYPE html>
@@ -104,19 +128,22 @@ foreach ($users as $u) {
                 <p style="color: #666; font-size: 0.9em;">※総練習時間: <?php echo $all_users_total_hours; ?> 時間 / 総ボール代: ¥<?php echo number_format($total_ball_fee); ?></p>
 
                 <table class="practice-table" style="display:block; overflow-x:auto; white-space:nowrap;">
-                    <thead><tr style="background:#4a86e8; color:white;"><th>代</th><th>名前</th><th>合計金額</th><th>ｺｰﾄ代</th><th>ﾎﾞｰﾙ代</th><th>雑費</th><th>時間</th><th>操作</th></tr></thead>
+                    <thead><tr style="background:#4a86e8; color:white;"><th>代</th><th>名前</th><th>最終金額</th><th>ｺｰﾄ代</th><th>ﾎﾞｰﾙ代</th><th>雑費</th><th style="color:#ffcccc;">立替済(ﾏｲﾅｽ)</th><th>時間</th><th>操作</th></tr></thead>
                     <tbody>
                         <?php foreach ($users as $u): 
-                            // ★変更：0代（OB等）の場合は表示しない（0円の現役生は表示する）
-                            if ($u['generation'] == 0) continue; 
+                            // フレ以外で合計が0円なら非表示（マイナスやプラスがあれば表示）
+                            if ($u['generation'] == 0 && $user_totals[$u['id']] == 0) continue; 
                         ?>
-                        <tr>
+                        <tr style="<?php echo ($user_totals[$u['id']] < 0) ? 'background:#fff3f3;' : ''; ?>">
                             <td><?php echo $u['generation']; ?></td>
                             <td><strong><?php echo htmlspecialchars($u['name_kana']); ?></strong></td>
-                            <td style="font-weight:bold; <?php echo ($user_totals[$u['id']] == 0) ? 'color:#999;' : 'color:#d35400;'; ?>">¥<?php echo number_format($user_totals[$u['id']]); ?></td>
+                            <td style="font-weight:bold; color:<?php echo ($user_totals[$u['id']] < 0) ? '#0056b3' : (($user_totals[$u['id']] == 0) ? '#999' : '#d35400'); ?>;">
+                                <?php echo ($user_totals[$u['id']] <= 0 ? '' : '¥') . number_format($user_totals[$u['id']]); ?>
+                            </td>
                             <td style="font-size:0.85em; color:#666;">¥<?php echo number_format(round($user_court_fee[$u['id']])); ?></td>
                             <td style="font-size:0.85em; color:#666;">¥<?php echo number_format(round($user_ball_fee[$u['id']])); ?></td>
                             <td style="font-size:0.85em; color:#666;">¥<?php echo number_format(round($user_misc_fee[$u['id']])); ?></td>
+                            <td style="font-size:0.85em; color:#dc3545; font-weight:bold;"><?php echo ($user_advance[$u['id']] > 0) ? '-¥' . number_format($user_advance[$u['id']]) : '0'; ?></td>
                             <td style="font-size:0.85em; color:#666;"><?php echo $user_hours[$u['id']]; ?>h</td>
                             <td>
                                 <form method="POST" onsubmit="return confirm('削除しますか？');"><input type="hidden" name="delete_user_id" value="<?php echo $u['id']; ?>"><button type="submit" style="background:#dc3545; color:white; border:none; padding:4px 8px; border-radius:4px;">削除</button></form>
