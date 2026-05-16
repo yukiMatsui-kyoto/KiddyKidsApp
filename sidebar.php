@@ -9,6 +9,7 @@
             管理者メニュー
         </li>
         <li><a href="admin.php">練習管理</a></li>
+        <li><a href="admin_court_cards.php">コートカード・立替</a></li>
         <li><a href="admin_expenses.php">ボール代・雑費管理</a></li>
         <li><a href="admin_accounting.php">全体会計・名簿</a></li>
 

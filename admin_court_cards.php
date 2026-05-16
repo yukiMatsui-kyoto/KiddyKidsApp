@@ -24,12 +24,21 @@ $practices = $pdo->query("SELECT * FROM practices ORDER BY practice_date DESC")-
 ?>
 <!DOCTYPE html>
 <html lang="ja">
-<head><meta charset="UTF-8"><title>コートカード</title><link rel="stylesheet" href="style.css"></head>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>コートカード（立替管理）</title>
+    <link rel="stylesheet" href="style.css?v=<?php echo filemtime('style.css'); ?>">
+</head>
 <body>
     <?php include 'sidebar.php'; ?>
     <div class="main-wrapper">
         <header class="global-navbar">
-            <div class="logo-area"><strong>コートカード（立替管理）</strong></div>
+            <div class="logo-area">
+                <span class="hamburger" onclick="document.querySelector('.sidebar').classList.toggle('active');">☰</span>
+                <img src="logo.png" alt="logo" onerror="this.style.display='none'">    
+                <strong>コートカード（立替管理）</strong>
+            </div>
         </header>
         <main class="content-body">
             
