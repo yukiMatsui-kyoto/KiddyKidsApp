@@ -10,7 +10,6 @@ $stmt = $pdo->prepare("SELECT *, DATEDIFF(practice_date, CURDATE()) as days_left
 $stmt->execute([$now]);
 $practices = $stmt->fetchAll();
 
-//曜日の日本語配列
 $weeks = ['日', '月', '火', '水', '木', '金', '土'];
 ?>
 <!DOCTYPE html>
@@ -18,7 +17,7 @@ $weeks = ['日', '月', '火', '水', '木', '金', '土'];
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>参加登録</title>
+    <title>参加登録 - KiddyKiddsFreshers</title>
     <link rel="stylesheet" href="style.css?v=<?php echo filemtime('style.css'); ?>">
 </head>
 <body>
@@ -40,9 +39,16 @@ $weeks = ['日', '月', '火', '水', '木', '金', '土'];
                         <th style="white-space: nowrap;">参加者</th>
                     </tr>
                     <?php foreach ($practices as $p): 
-                        // 日付から曜日番号（0=日, 6=土）を取得し、日本語の曜日を決定
                         $w_idx = date('w', strtotime($p['practice_date']));
                         $youbi = $weeks[$w_idx];
+
+                        // Googleカレンダー追加用のURLを自動生成
+                        $gcal_title = urlencode("フレ団練"); // 予定のタイトル
+                        $gcal_loc = urlencode($p['location']); // 場所
+                        $gcal_start = date('Ymd\THis', strtotime($p['practice_date'] . ' ' . $p['start_time']));
+                        $gcal_end = date('Ymd\THis', strtotime($p['practice_date'] . ' ' . $p['end_time']));
+                        
+                        $gcal_url = "https://calendar.google.com/calendar/render?action=TEMPLATE&text={$gcal_title}&dates={$gcal_start}/{$gcal_end}&location={$gcal_loc}&ctz=Asia/Tokyo";
                     ?>
                     <tr>
                         <td style="white-space: nowrap;">
@@ -56,14 +62,21 @@ $weeks = ['日', '月', '火', '水', '木', '金', '土'];
                             $stmt->execute([$p['id'], $user_id]);
                             $my_status = $stmt->fetchColumn();
 
+                            // 参加登録済み（欠席以外）の場合
                             if ($my_status && $my_status !== '欠席'): 
-                                $cancel_msg = ($p['days_left'] <= 7) ? "7日以内の練習のため参加時と同じ料金がかかります" : "本当にキャンセルしますか？";
+                                $cancel_msg = ($p['days_left'] <= 7) ? "7日以内キャンセルなのでキャンセルしないときと同じ金額がかかります。次回から気を付けよう" : "本当にキャンセルしますか？";
                             ?>
                                 <form action="submit_attendance.php" method="POST" onsubmit="return confirm('<?php echo $cancel_msg; ?>');" style="margin:0;">
                                     <input type="hidden" name="practice_id" value="<?php echo $p['id']; ?>">
                                     <input type="hidden" name="status" value="欠席">
                                     <button type="submit" class="btn-cancel" style="white-space: nowrap;">キャンセル</button>
                                 </form>
+                                
+                                <div style="margin-top: 8px; text-align: center;">
+                                    <a href="<?php echo $gcal_url; ?>" target="_blank" style="display: inline-block; font-size: 0.75em; color: #1a73e8; background: #e8f0fe; padding: 4px 8px; border-radius: 4px; text-decoration: none; font-weight: bold; white-space: nowrap;">
+                                        カレンダーに追加
+                                    </a>
+                                </div>
                             <?php else: ?>
                                 <form action="submit_attendance.php" method="POST" style="display:flex; gap:5px; margin:0;">
                                     <input type="hidden" name="practice_id" value="<?php echo $p['id']; ?>">

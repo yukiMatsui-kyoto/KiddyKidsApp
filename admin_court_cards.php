@@ -3,7 +3,8 @@ session_start();
 require_once 'db.php';
 if (!isset($_SESSION['is_admin'])) { header('Location: admin_login.php'); exit; }
 
-// 新規ユーザーのスピード追加
+$weeks = ['日', '月', '火', '水', '木', '金', '土'];
+
 if (isset($_POST['add_user'])) {
     $gen = $_POST['generation'];
     $name = trim($_POST['name_kana']);
@@ -11,7 +12,6 @@ if (isset($_POST['add_user'])) {
     header("Location: admin_court_cards.php?added=1"); exit;
 }
 
-// コート立替者の設定
 if (isset($_POST['assign_court'])) {
     $pid = $_POST['practice_id'];
     $uid = empty($_POST['user_id']) ? null : $_POST['user_id'];
@@ -43,7 +43,7 @@ $practices = $pdo->query("SELECT * FROM practices ORDER BY practice_date DESC")-
         <main class="content-body">
             
             <div class="main-card" style="margin-bottom: 20px; background: #fdfbf7;">
-                <h3>データベースにいない人（上回、経等）を追加</h3>
+                <h3>データベースにいない人（上回、経等）を追加(選択肢になかったら)</h3>
                 <form method="POST" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
                     <input type="number" name="generation" placeholder="代 (例: 0)" required style="width:100px;">
                     <input type="text" name="name_kana" placeholder="名前 (ひらがな)" required>
@@ -56,9 +56,11 @@ $practices = $pdo->query("SELECT * FROM practices ORDER BY practice_date DESC")-
                 <table class="practice-table" style="display:block; overflow-x:auto; white-space:nowrap;">
                     <thead><tr><th>日付</th><th>場所</th><th>コート代</th><th>許可証(画像)</th><th>立替者を選択</th></tr></thead>
                     <tbody>
-                        <?php foreach ($practices as $p): ?>
+                        <?php foreach ($practices as $p): 
+                            $w_idx = date('w', strtotime($p['practice_date']));
+                        ?>
                         <tr>
-                            <td><?php echo date('n/j', strtotime($p['practice_date'])); ?></td>
+                            <td><?php echo date('n/j', strtotime($p['practice_date'])) . '(' . $weeks[$w_idx] . ')'; ?></td>
                             <td><?php echo htmlspecialchars($p['location']); ?></td>
                             <td>¥<?php echo number_format($p['facility_fee']); ?></td>
                             <td>

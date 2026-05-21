@@ -9,6 +9,8 @@ if (!isset($_SESSION['user_id'])) { header('Location: login.php'); exit; }
 $user_id = $_SESSION['user_id'];
 $now_jst = date('Y-m-d H:i:s');
 
+$weeks = ['日', '月', '火', '水', '木', '金', '土'];
+
 // 自分の参加予定
 $stmt = $pdo->prepare("SELECT p.*, a.status, DATEDIFF(p.practice_date, CURDATE()) as days_left FROM practices p JOIN practice_attendance a ON p.id = a.practice_id WHERE a.user_id = ? AND CONCAT(p.practice_date, ' ', p.end_time) > ? AND p.is_cancelled = 0 AND a.status IN ('参加', '途中', '途中参', 'ドタ参', 'ドタ途中参', 'お手伝い') ORDER BY p.practice_date ASC");
 $stmt->execute([$user_id, $now_jst]);
@@ -21,7 +23,6 @@ $next_practice = $stmt->fetch();
 
 $p_full = []; $p_half = []; $p_dota = []; $p_dota_half = []; $p_help = [];
 if ($next_practice) {
-    // 役割を取得
     $r_stmt = $pdo->prepare("SELECT user_id, role_type FROM practice_roles WHERE practice_id = ?");
     $r_stmt->execute([$next_practice['id']]);
     $role_map = [];
@@ -29,7 +30,6 @@ if ($next_practice) {
         $role_map[$row['user_id']][] = $row['role_type'];
     }
 
-    // ★COALESCEにNULLIFを追加して、空欄の時に確実に本名が出るようにしました
     $stmt = $pdo->prepare("SELECT COALESCE(NULLIF(u.display_name, ''), u.name_kana) as show_name, a.status, u.generation, u.id as uid FROM practice_attendance a JOIN users u ON a.user_id = u.id WHERE a.practice_id = ? AND a.status != '欠席'");
     $stmt->execute([$next_practice['id']]);
     $all_p = $stmt->fetchAll();
@@ -73,11 +73,13 @@ if ($next_practice) {
                 <h3 style="color: #4a86e8; margin-top:0;">あなたの参加予定</h3>
                 <?php if (count($my_upcoming_practices) > 0): ?>
                     <ul style="list-style: none; padding: 0;">
-                        <?php foreach ($my_upcoming_practices as $p): ?>
+                        <?php foreach ($my_upcoming_practices as $p): 
+                            $w_idx = date('w', strtotime($p['practice_date']));
+                        ?>
                             <li style="padding: 15px; border-bottom: 1px solid #eee; margin-bottom: 10px; background: #fdfdfd; border-radius: 8px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center;">
                                     <div>
-                                        <strong style="font-size: 1.1em;"><?php echo date('n/j', strtotime($p['practice_date'])); ?> (<?php echo htmlspecialchars($p['location']); ?>)</strong><br>
+                                        <strong style="font-size: 1.1em;"><?php echo date('n/j', strtotime($p['practice_date'])) . '(' . $weeks[$w_idx] . ')'; ?> (<?php echo htmlspecialchars($p['location']); ?>)</strong><br>
                                         <span style="color: #666; font-size: 0.85em;"><?php echo date('H:i', strtotime($p['start_time'])); ?> - <?php echo date('H:i', strtotime($p['end_time'])); ?></span><br>
                                         <span style="display:inline-block; margin-top:5px; padding:2px 8px; background:#e2e8f0; border-radius:12px; font-size:0.8em;"><?php echo $p['status']; ?></span>
                                     </div>
@@ -94,9 +96,11 @@ if ($next_practice) {
                 <a href="attendance_list.php" class="btn-submit" style="display:block; text-align:center; margin-top:20px; text-decoration:none;">出欠を入力・変更する</a>
             </div>
 
-            <?php if ($next_practice): ?>
+            <?php if ($next_practice): 
+                $nw_idx = date('w', strtotime($next_practice['practice_date']));
+            ?>
             <div class="main-card">
-                <h3 style="margin-top:0;">次回の参加者 (<?php echo date('n/j', strtotime($next_practice['practice_date'])); ?>)</h3>
+                <h3 style="margin-top:0;">次回の参加者 (<?php echo date('n/j', strtotime($next_practice['practice_date'])) . '(' . $weeks[$nw_idx] . ')'; ?>)</h3>
                 <div style="background: #f0f2f5; padding: 15px; border-radius: 8px;">
                     <p style="margin:0 0 10px 0; font-weight:bold;">合計: <?php echo count($p_full) + count($p_half) + count($p_dota) + count($p_dota_half) + count($p_help); ?>名</p>
                     

@@ -4,11 +4,13 @@ session_start();
 require_once 'db.php';
 if (!isset($_SESSION['is_admin'])) { header('Location: admin_login.php'); exit; }
 
+
+$weeks = ['日', '月', '火', '水', '木', '金', '土'];
+
 try {
     $pdo->exec("CREATE TABLE IF NOT EXISTS global_expenses (id INT AUTO_INCREMENT PRIMARY KEY, expense_type VARCHAR(20), amount INT, description VARCHAR(255), expense_date DATE) DEFAULT CHARSET=utf8mb4");
     $pdo->exec("CREATE TABLE IF NOT EXISTS global_expense_payers (expense_id INT, user_id INT, PRIMARY KEY(expense_id, user_id)) DEFAULT CHARSET=utf8mb4");
     $pdo->exec("ALTER TABLE global_expenses CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
-    // ★立替用のカラムを自動追加
     $pdo->exec("ALTER TABLE global_expenses ADD COLUMN paid_by INT DEFAULT NULL");
 } catch (PDOException $e) {}
 
@@ -38,7 +40,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// 支出一覧に立替者の名前も結合して取得
 $expenses = $pdo->query("SELECT e.*, u.name_kana as buyer FROM global_expenses e LEFT JOIN users u ON e.paid_by = u.id ORDER BY e.expense_date DESC")->fetchAll();
 $all_users = $pdo->query("SELECT id, name_kana, generation FROM users ORDER BY generation DESC, name_kana ASC")->fetchAll();
 ?>
@@ -65,8 +66,14 @@ $all_users = $pdo->query("SELECT id, name_kana, generation FROM users ORDER BY g
                 <h3>「<?php echo htmlspecialchars($expense['description']); ?>」の負担者設定</h3>
                 <p>金額: ¥<?php echo number_format($expense['amount']); ?></p>
                 
-                <div style="margin-bottom: 15px;">
-                    <button type="button" id="toggle-ob-btn" onclick="toggleOB()" style="background:#6c757d; color:white; padding:8px 15px; border:none; border-radius:4px; cursor:pointer;">
+                <div style="margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button type="button" onclick="selectAllFreshers()" style="background:#28a745; color:white; padding:8px 15px; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">
+                        ✓ フレを全選択
+                    </button>
+                    <button type="button" onclick="deselectAllFreshers()" style="background:#dc3545; color:white; padding:8px 15px; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">
+                        ✗ フレを全解除
+                    </button>
+                    <button type="button" id="toggle-ob-btn" onclick="toggleOB()" style="background:#6c757d; color:white; padding:8px 15px; border:none; border-radius:4px; cursor:pointer; font-weight:bold;">
                         ＋ お手伝いも負担する場合（フレ以外を表示）
                     </button>
                 </div>
@@ -78,10 +85,9 @@ $all_users = $pdo->query("SELECT id, name_kana, generation FROM users ORDER BY g
                         <?php foreach ($all_users as $u): 
                             $is_ob = ($u['generation'] == 0);
                             $is_checked = in_array($u['id'], $payer_ids);
-                            // フレ以外で、かつチェックが入っていなければ初期状態は隠す
                             $hide_style = ($is_ob && !$is_checked) ? 'display: none;' : '';
                         ?>
-                        <tr class="<?php echo $is_ob ? 'ob-row' : ''; ?>" style="<?php echo $hide_style; ?>">
+                        <tr class="<?php echo $is_ob ? 'ob-row' : 'fresher-row'; ?>" style="<?php echo $hide_style; ?>">
                             <td><?php echo htmlspecialchars($u['name_kana']); ?> <?php if($is_ob) echo '<span style="color:#28a745; font-size:0.8em;">(OB)</span>'; ?></td>
                             <td><input type="checkbox" name="payers[]" value="<?php echo $u['id']; ?>" <?php if($is_checked) echo 'checked'; ?>></td>
                         </tr>
@@ -93,6 +99,19 @@ $all_users = $pdo->query("SELECT id, name_kana, generation FROM users ORDER BY g
             </div>
             
             <script>
+            // フレのチェックボックスを一斉にONにする
+            function selectAllFreshers() {
+                document.querySelectorAll('.fresher-row input[type="checkbox"]').forEach(cb => {
+                    cb.checked = true;
+                });
+            }
+            // フレのチェックボックスを一斉にOFFにする
+            function deselectAllFreshers() {
+                document.querySelectorAll('.fresher-row input[type="checkbox"]').forEach(cb => {
+                    cb.checked = false;
+                });
+            }
+
             function toggleOB() {
                 const obRows = document.querySelectorAll('.ob-row');
                 const btn = document.getElementById('toggle-ob-btn');
@@ -103,7 +122,6 @@ $all_users = $pdo->query("SELECT id, name_kana, generation FROM users ORDER BY g
                         row.style.display = 'table-row';
                         isHidden = true;
                     } else {
-                        // チェックが入っていないフレ以外だけ再度隠す
                         if (!row.querySelector('input').checked) {
                             row.style.display = 'none';
                         }
@@ -142,7 +160,7 @@ $all_users = $pdo->query("SELECT id, name_kana, generation FROM users ORDER BY g
                     
                     <p style="color:#d35400; font-weight:bold;">立て替え者</p>
                     <select name="paid_by" style="padding:10px; margin-bottom:10px; width:100%;">
-                        <option value="">-- サークル口座から支出 --</option>
+                        <option value="">-- kiddy口座から支出 --</option>
                         <?php foreach ($all_users as $u): ?>
                             <option value="<?php echo $u['id']; ?>"><?php echo $u['generation']; ?>代: <?php echo htmlspecialchars($u['name_kana']); ?></option>
                         <?php endforeach; ?>
@@ -157,9 +175,11 @@ $all_users = $pdo->query("SELECT id, name_kana, generation FROM users ORDER BY g
                 <h3>支出履歴</h3>
                 <table class="practice-table" style="display:block; overflow-x:auto; white-space:nowrap;">
                     <tr><th>日付</th><th>内容</th><th>立替者</th><th>種類</th><th>金額</th><th>操作</th></tr>
-                    <?php foreach ($expenses as $e): ?>
+                    <?php foreach ($expenses as $e): 
+                        $w_idx = date('w', strtotime($e['expense_date']));
+                    ?>
                     <tr>
-                        <td><?php echo date('n/j', strtotime($e['expense_date'])); ?></td>
+                        <td><?php echo date('n/j', strtotime($e['expense_date'])) . '(' . $weeks[$w_idx] . ')'; ?></td>
                         <td><?php echo htmlspecialchars($e['description']); ?></td>
                         <td><?php echo $e['buyer'] ? '<span style="color:#d35400;">'.htmlspecialchars($e['buyer']).'</span>' : 'サークル枠'; ?></td>
                         <td><?php echo ($e['expense_type'] === 'ball') ? '<span style="color:#28a745; font-weight:bold;">ボール代</span>' : '<span style="color:#17a2b8; font-weight:bold;">雑費</span>'; ?></td>

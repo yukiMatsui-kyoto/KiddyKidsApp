@@ -5,6 +5,9 @@ require_once 'db.php';
 if (!isset($_SESSION['user_id'])) { header('Location: login.php'); exit; }
 if (!isset($_SESSION['is_admin'])) { header('Location: admin_login.php'); exit; }
 
+
+$weeks = ['日', '月', '火', '水', '木', '金', '土'];
+
 $stmt = $pdo->query("SELECT * FROM practices ORDER BY practice_date DESC, start_time DESC");
 $all_practices = $stmt->fetchAll();
 
@@ -64,7 +67,15 @@ foreach ($all_practices as $p) {
                 <h3>今後の練習一覧</h3>
                 <table class="practice-table">
                     <tr><th>日付</th><th>会場</th><th>操作</th></tr>
-                    <?php foreach ($upcoming as $p): ?><tr style="<?php if($p['is_cancelled']) echo 'background:#ffeeba;'; ?>"><td><?php echo date('n/j', strtotime($p['practice_date'])); ?></td><td><?php echo htmlspecialchars($p['location']); ?></td><td><a href="admin_roster.php?id=<?php echo $p['id']; ?>" class="btn-waive" style="text-decoration:none;">詳細・編集</a></td></tr><?php endforeach; ?>
+                    <?php foreach ($upcoming as $p): 
+                        $w_idx = date('w', strtotime($p['practice_date']));
+                    ?>
+                    <tr style="<?php if($p['is_cancelled']) echo 'background:#ffeeba;'; ?>">
+                        <td><?php echo date('n/j', strtotime($p['practice_date'])) . '(' . $weeks[$w_idx] . ')'; ?></td>
+                        <td><?php echo htmlspecialchars($p['location']); ?></td>
+                        <td><a href="admin_roster.php?id=<?php echo $p['id']; ?>" class="btn-waive" style="text-decoration:none;">詳細・編集</a></td>
+                    </tr>
+                    <?php endforeach; ?>
                 </table>
             </div>
 
@@ -72,7 +83,15 @@ foreach ($all_practices as $p) {
                 <h3>過去の練習の表示・編集</h3>
                 <table class="practice-table">
                     <tr><th>日付</th><th>会場</th><th>操作</th></tr>
-                    <?php foreach ($past as $p): ?><tr style="<?php if($p['is_cancelled']) echo 'background:#ffeeba;'; ?>"><td style="color: #777;"><?php echo date('n/j', strtotime($p['practice_date'])); ?></td><td style="color: #777;"><?php echo htmlspecialchars($p['location']); ?></td><td><a href="admin_roster.php?id=<?php echo $p['id']; ?>" class="btn-waive" style="text-decoration:none; background:#6c757d;">詳細・編集</a></td></tr><?php endforeach; ?>
+                    <?php foreach ($past as $p): 
+                        $w_idx = date('w', strtotime($p['practice_date']));
+                    ?>
+                    <tr style="<?php if($p['is_cancelled']) echo 'background:#ffeeba;'; ?>">
+                        <td style="color: #777;"><?php echo date('n/j', strtotime($p['practice_date'])) . '(' . $weeks[$w_idx] . ')'; ?></td>
+                        <td style="color: #777;"><?php echo htmlspecialchars($p['location']); ?></td>
+                        <td><a href="admin_roster.php?id=<?php echo $p['id']; ?>" class="btn-waive" style="text-decoration:none; background:#6c757d;">詳細・編集</a></td>
+                    </tr>
+                    <?php endforeach; ?>
                 </table>
             </div>
         </main>
