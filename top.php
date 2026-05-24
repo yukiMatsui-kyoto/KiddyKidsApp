@@ -79,7 +79,7 @@ if ($next_practice) {
                             <li style="padding: 15px; border-bottom: 1px solid #eee; margin-bottom: 10px; background: #fdfdfd; border-radius: 8px;">
                                 <div style="display: flex; justify-content: space-between; align-items: center;">
                                     <div>
-                                        <strong style="font-size: 1.1em;"><?php echo date('n/j', strtotime($p['practice_date'])) . '(' . $weeks[$w_idx] . ')'; ?> (<?php echo htmlspecialchars($p['location']); ?>)</strong><br>
+                                        <strong style="font-size: 1.1em;"><?php echo date('n/j', strtotime($p['practice_date'])) . '(' . $weeks[$w_idx] . ')'; ?> (<?php echo htmlspecialchars($p['location']); ?><?php if(!empty($p['court_number'])) echo ' ' . htmlspecialchars($p['court_number']); ?>)</strong><br>
                                         <span style="color: #666; font-size: 0.85em;"><?php echo date('H:i', strtotime($p['start_time'])); ?> - <?php echo date('H:i', strtotime($p['end_time'])); ?></span><br>
                                         <span style="display:inline-block; margin-top:5px; padding:2px 8px; background:#e2e8f0; border-radius:12px; font-size:0.8em;"><?php echo $p['status']; ?></span>
                                     </div>
@@ -100,7 +100,18 @@ if ($next_practice) {
                 $nw_idx = date('w', strtotime($next_practice['practice_date']));
             ?>
             <div class="main-card">
-                <h3 style="margin-top:0;">次回の参加者 (<?php echo date('n/j', strtotime($next_practice['practice_date'])) . '(' . $weeks[$nw_idx] . ')'; ?>)</h3>
+                <h3 style="margin-top:0; margin-bottom:15px;">次回の練習</h3>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                    <div style="font-size: 1.1em; font-weight: bold; color: #333;">
+                        <?php echo date('n/j', strtotime($next_practice['practice_date'])) . '(' . $weeks[$nw_idx] . ')'; ?> 
+                        <?php echo date('H:i', strtotime($next_practice['start_time'])); ?> - <?php echo date('H:i', strtotime($next_practice['end_time'])); ?>
+                    </div>
+                    <div style="border: 2px solid #4a86e8; color: #4a86e8; padding: 4px 12px; border-radius: 4px; font-weight: bold;">
+                        <?php echo htmlspecialchars($next_practice['location']); ?><?php if(!empty($next_practice['court_number'])) echo htmlspecialchars($next_practice['court_number']); ?>
+                    </div>
+                </div>
+
                 <div style="background: #f0f2f5; padding: 15px; border-radius: 8px;">
                     <p style="margin:0 0 10px 0; font-weight:bold;">合計: <?php echo count($p_full) + count($p_half) + count($p_dota) + count($p_dota_half) + count($p_help); ?>名</p>
                     

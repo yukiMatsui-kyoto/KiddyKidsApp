@@ -7,6 +7,7 @@ $date = $_POST['practice_date'];
 $fee = $_POST['facility_fee'];
 $time_preset = $_POST['time_preset'];
 $location_preset = $_POST['location_preset'];
+$court_number = $_POST['court_number'] ?? null;
 
 if ($time_preset === 'daytime') { $start_time = '16:00:00'; $end_time = '18:00:00'; } 
 elseif ($time_preset === 'night') { $start_time = '18:00:00'; $end_time = '21:00:00'; } 
@@ -23,8 +24,8 @@ if (isset($_FILES['permit_file']) && $_FILES['permit_file']['error'] === UPLOAD_
 }
 
 try {
-    $stmt = $pdo->prepare("INSERT INTO practices (practice_date, start_time, end_time, location, facility_fee, permit_path, is_cancelled) VALUES (?, ?, ?, ?, ?, ?, 0)");
-    $stmt->execute([$date, $start_time, $end_time, $location, $fee, $permit_filename]);
+    $stmt = $pdo->prepare("INSERT INTO practices (practice_date, start_time, end_time, location, court_number, facility_fee, permit_path, is_cancelled) VALUES (?, ?, ?, ?, ?, ?, ?, 0)");
+    $stmt->execute([$date, $start_time, $end_time, $location, $court_number, $fee, $permit_filename]);
     header('Location: admin.php'); exit;
 } catch (PDOException $e) { echo "エラー: " . $e->getMessage(); exit; }
 ?>

@@ -42,9 +42,10 @@ $weeks = ['日', '月', '火', '水', '木', '金', '土'];
                         $w_idx = date('w', strtotime($p['practice_date']));
                         $youbi = $weeks[$w_idx];
 
-                        // Googleカレンダー追加用のURLを自動生成
-                        $gcal_title = urlencode("フレ団練"); // 予定のタイトル
-                        $gcal_loc = urlencode($p['location']); // 場所
+                        $gcal_title = urlencode("フレ団練"); 
+                        // ★Googleカレンダーの場所にもコート番号を含める
+                        $gcal_loc_str = $p['location'] . (!empty($p['court_number']) ? ' ' . $p['court_number'] : '');
+                        $gcal_loc = urlencode($gcal_loc_str); 
                         $gcal_start = date('Ymd\THis', strtotime($p['practice_date'] . ' ' . $p['start_time']));
                         $gcal_end = date('Ymd\THis', strtotime($p['practice_date'] . ' ' . $p['end_time']));
                         
@@ -55,14 +56,18 @@ $weeks = ['日', '月', '火', '水', '木', '金', '土'];
                             <strong><?php echo date('n/j', strtotime($p['practice_date'])) . '(' . $youbi . ')'; ?></strong><br>
                             <span style="font-size: 0.85em; color: #666;"><?php echo date('H:i', strtotime($p['start_time'])); ?> - <?php echo date('H:i', strtotime($p['end_time'])); ?></span>
                         </td>
-                        <td style="white-space: nowrap;"><?php echo htmlspecialchars($p['location']); ?></td>
+                        <td style="white-space: nowrap;">
+                            <?php echo htmlspecialchars($p['location']); ?>
+                            <?php if(!empty($p['court_number'])): ?>
+                                <br><span style="font-size: 0.85em; color: #666;"><?php echo htmlspecialchars($p['court_number']); ?></span>
+                            <?php endif; ?>
+                        </td>
                         <td>
                             <?php
                             $stmt = $pdo->prepare("SELECT status FROM practice_attendance WHERE practice_id = ? AND user_id = ?");
                             $stmt->execute([$p['id'], $user_id]);
                             $my_status = $stmt->fetchColumn();
 
-                            // 参加登録済み（欠席以外）の場合
                             if ($my_status && $my_status !== '欠席'): 
                                 $cancel_msg = ($p['days_left'] <= 7) ? "7日以内キャンセルなのでキャンセルしないときと同じ金額がかかります。次回から気を付けよう" : "本当にキャンセルしますか？";
                             ?>

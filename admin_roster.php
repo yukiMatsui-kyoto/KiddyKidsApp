@@ -3,13 +3,11 @@ date_default_timezone_set('Asia/Tokyo');
 session_start();
 require_once 'db.php';
 
-// 管理者認証チェック
 if (!isset($_SESSION['is_admin'])) { header('Location: admin_login.php'); exit; }
 
 $practice_id = $_GET['id'] ?? null;
 if (!$practice_id) { header('Location: admin.php'); exit; }
 
-// --- 更新処理の受付 ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['update_details'])) {
         $pdo->prepare("DELETE FROM practice_roles WHERE practice_id = ?")->execute([$practice_id]);
@@ -33,10 +31,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (isset($_POST['update_practice'])) {
-        $stmt = $pdo->prepare("UPDATE practices SET practice_date = ?, start_time = ?, end_time = ?, location = ?, facility_fee = ? WHERE id = ?");
+        $stmt = $pdo->prepare("UPDATE practices SET practice_date = ?, start_time = ?, end_time = ?, location = ?, court_number = ?, facility_fee = ? WHERE id = ?");
         $stmt->execute([
             $_POST['practice_date'], $_POST['start_time'], $_POST['end_time'], 
-            $_POST['location'], $_POST['facility_fee'], $practice_id
+            $_POST['location'], $_POST['court_number'], $_POST['facility_fee'], $practice_id
         ]);
     }
 
@@ -45,9 +43,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([$practice_id, $_POST['new_user_id'], $_POST['new_status']]);
     }
 
+    // ★修正：ボタン自体にIDを持たせて、確実にその人だけを消去するように変更
     if (isset($_POST['delete_attendance'])) {
+        $target_uid = $_POST['delete_attendance'];
+        
+        // 出欠データを消去
         $stmt = $pdo->prepare("DELETE FROM practice_attendance WHERE practice_id = ? AND user_id = ?");
-        $stmt->execute([$practice_id, $_POST['del_uid']]);
+        $stmt->execute([$practice_id, $target_uid]);
+        
+        // 役割（運搬・仕切りなど）も同時に綺麗に消去
+        $stmt_role = $pdo->prepare("DELETE FROM practice_roles WHERE practice_id = ? AND user_id = ?");
+        $stmt_role->execute([$practice_id, $target_uid]);
     }
 
     if (isset($_POST['cancel_practice'])) {
@@ -106,6 +112,7 @@ $all_users = $pdo->query("SELECT id, name_kana, generation FROM users ORDER BY g
                     時間: <input type="time" name="start_time" value="<?php echo $p['start_time']; ?>"> 〜 
                           <input type="time" name="end_time" value="<?php echo $p['end_time']; ?>"><br>
                     会場: <input type="text" name="location" value="<?php echo htmlspecialchars($p['location']); ?>"><br>
+                    コート番号: <input type="text" name="court_number" value="<?php echo htmlspecialchars($p['court_number'] ?? ''); ?>" placeholder="例: 1, 2"><br>
                     コート代: <input type="number" name="facility_fee" value="<?php echo $p['facility_fee']; ?>"> 円<br>
                     <button type="submit" class="btn-submit" style="margin-top:10px;">基本情報を保存</button>
                 </form>
@@ -135,7 +142,7 @@ $all_users = $pdo->query("SELECT id, name_kana, generation FROM users ORDER BY g
 
             <div class="main-card">
                 <h3>参加者・役割・手動調整</h3>
-                <p style="font-size:0.85em; color:#666;">※0代のユーザーは、どの出欠を選んでも自動で「お手伝い(0円)」になります。</p>
+                <p style="font-size:0.85em; color:#666;">※0代は、どれを選んでも自動で「お手伝い(0円)」になります。</p>
                 <form method="POST" action="admin_roster.php?id=<?php echo htmlspecialchars($practice_id); ?>">
                     <table class="practice-table" style="display:block; overflow-x:auto; white-space:nowrap;">
                         <thead>
@@ -167,8 +174,7 @@ $all_users = $pdo->query("SELECT id, name_kana, generation FROM users ORDER BY g
                                     <label><input type="checkbox" name="roles[<?php echo $m['id']; ?>][]" value="仕切り" <?php if(isset($role_map[$m['id']]) && in_array('仕切り', $role_map[$m['id']])) echo 'checked'; ?>> 仕切り</label>
                                 </td>
                                 <td>
-                                    <button type="submit" name="delete_attendance" value="1" class="btn-cancel" onclick="return confirm('この参加データを消去しますか？')">消去</button>
-                                    <input type="hidden" name="del_uid" value="<?php echo $m['id']; ?>">
+                                    <button type="submit" name="delete_attendance" value="<?php echo $m['id']; ?>" class="btn-cancel" onclick="return confirm('この参加データを消去しますか？')">消去</button>
                                 </td>
                             </tr>
                             <?php endforeach; ?>

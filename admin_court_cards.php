@@ -61,7 +61,12 @@ $practices = $pdo->query("SELECT * FROM practices ORDER BY practice_date DESC")-
                         ?>
                         <tr>
                             <td><?php echo date('n/j', strtotime($p['practice_date'])) . '(' . $weeks[$w_idx] . ')'; ?></td>
-                            <td><?php echo htmlspecialchars($p['location']); ?></td>
+                            <td>
+                                <?php echo htmlspecialchars($p['location']); ?>
+                                <?php if(!empty($p['court_number'])): ?>
+                                    <br><span style="font-size:0.85em; color:#666;"><?php echo htmlspecialchars($p['court_number']); ?></span>
+                                <?php endif; ?>
+                            </td>
                             <td>¥<?php echo number_format($p['facility_fee']); ?></td>
                             <td>
                                 <?php if (!empty($p['permit_path'])): ?>

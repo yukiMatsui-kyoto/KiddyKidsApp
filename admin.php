@@ -5,6 +5,10 @@ require_once 'db.php';
 if (!isset($_SESSION['user_id'])) { header('Location: login.php'); exit; }
 if (!isset($_SESSION['is_admin'])) { header('Location: admin_login.php'); exit; }
 
+// データベース自動拡張（コート番号用の枠を追加）
+try {
+    $pdo->exec("ALTER TABLE practices ADD COLUMN court_number VARCHAR(50) DEFAULT NULL");
+} catch (PDOException $e) {}
 
 $weeks = ['日', '月', '火', '水', '木', '金', '土'];
 
@@ -54,6 +58,9 @@ foreach ($all_practices as $p) {
                         <input type="text" name="custom_location" id="custom_location" placeholder="会場名を入力">
                     </div>
                     
+                    <p>コート番号（任意）</p>
+                    <input type="text" name="court_number" placeholder="例: 1, 2 または A, B" style="padding:10px; margin-bottom:10px;">
+                    
                     <p>コート代（円）</p>
                     <input type="number" name="facility_fee" value="5000" required style="padding:10px;">
                     
@@ -72,7 +79,10 @@ foreach ($all_practices as $p) {
                     ?>
                     <tr style="<?php if($p['is_cancelled']) echo 'background:#ffeeba;'; ?>">
                         <td><?php echo date('n/j', strtotime($p['practice_date'])) . '(' . $weeks[$w_idx] . ')'; ?></td>
-                        <td><?php echo htmlspecialchars($p['location']); ?></td>
+                        <td>
+                            <?php echo htmlspecialchars($p['location']); ?>
+                            <?php if(!empty($p['court_number'])) echo '<br><span style="font-size:0.8em;color:#666;">'.htmlspecialchars($p['court_number']).'</span>'; ?>
+                        </td>
                         <td><a href="admin_roster.php?id=<?php echo $p['id']; ?>" class="btn-waive" style="text-decoration:none;">詳細・編集</a></td>
                     </tr>
                     <?php endforeach; ?>
@@ -88,7 +98,10 @@ foreach ($all_practices as $p) {
                     ?>
                     <tr style="<?php if($p['is_cancelled']) echo 'background:#ffeeba;'; ?>">
                         <td style="color: #777;"><?php echo date('n/j', strtotime($p['practice_date'])) . '(' . $weeks[$w_idx] . ')'; ?></td>
-                        <td style="color: #777;"><?php echo htmlspecialchars($p['location']); ?></td>
+                        <td style="color: #777;">
+                            <?php echo htmlspecialchars($p['location']); ?>
+                            <?php if(!empty($p['court_number'])) echo '<br><span style="font-size:0.8em;">'.htmlspecialchars($p['court_number']).'</span>'; ?>
+                        </td>
                         <td><a href="admin_roster.php?id=<?php echo $p['id']; ?>" class="btn-waive" style="text-decoration:none; background:#6c757d;">詳細・編集</a></td>
                     </tr>
                     <?php endforeach; ?>
