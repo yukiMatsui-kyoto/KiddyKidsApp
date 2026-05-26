@@ -1,5 +1,7 @@
 <?php
 date_default_timezone_set('Asia/Tokyo');
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
 session_start();
 require_once 'db.php';
 
@@ -7,6 +9,18 @@ if (!isset($_SESSION['is_admin'])) { header('Location: admin_login.php'); exit; 
 
 $practice_id = $_GET['id'] ?? null;
 if (!$practice_id) { header('Location: admin.php'); exit; }
+
+// --- データベース自動拡張（ここで確実にカラムを追加します） ---
+try {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS practice_roles (practice_id INT, user_id INT, role_type VARCHAR(50), PRIMARY KEY(practice_id, user_id, role_type)) DEFAULT CHARSET=utf8mb4");
+    $pdo->exec("ALTER TABLE practice_roles CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci");
+    $pdo->exec("ALTER TABLE practice_attendance ADD COLUMN override_weight FLOAT DEFAULT NULL");
+    $pdo->exec("ALTER TABLE practice_attendance ADD COLUMN override_hours FLOAT DEFAULT NULL");
+    // ★追加：コート番号と男子練/女子練のカラムを詳細画面でも確実に追加する
+    $pdo->exec("ALTER TABLE practices ADD COLUMN court_number VARCHAR(50) DEFAULT NULL");
+    $pdo->exec("ALTER TABLE practices ADD COLUMN gender_target VARCHAR(20) DEFAULT NULL");
+} catch (PDOException $e) {}
+
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['update_details'])) {
@@ -31,10 +45,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (isset($_POST['update_practice'])) {
-        $stmt = $pdo->prepare("UPDATE practices SET practice_date = ?, start_time = ?, end_time = ?, location = ?, court_number = ?, facility_fee = ? WHERE id = ?");
+        $stmt = $pdo->prepare("UPDATE practices SET practice_date = ?, start_time = ?, end_time = ?, location = ?, court_number = ?, facility_fee = ?, gender_target = ? WHERE id = ?");
         $stmt->execute([
-            $_POST['practice_date'], $_POST['start_time'], $_POST['end_time'], 
-            $_POST['location'], $_POST['court_number'], $_POST['facility_fee'], $practice_id
+            $_POST['practice_date'], 
+            $_POST['start_time'], 
+            $_POST['end_time'], 
+            $_POST['location'], 
+            $_POST['court_number'], 
+            $_POST['facility_fee'], 
+            $_POST['gender_target'], 
+            $practice_id
         ]);
     }
 
@@ -43,17 +63,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->execute([$practice_id, $_POST['new_user_id'], $_POST['new_status']]);
     }
 
-    // ★修正：ボタン自体にIDを持たせて、確実にその人だけを消去するように変更
     if (isset($_POST['delete_attendance'])) {
         $target_uid = $_POST['delete_attendance'];
-        
-        // 出欠データを消去
-        $stmt = $pdo->prepare("DELETE FROM practice_attendance WHERE practice_id = ? AND user_id = ?");
-        $stmt->execute([$practice_id, $target_uid]);
-        
-        // 役割（運搬・仕切りなど）も同時に綺麗に消去
-        $stmt_role = $pdo->prepare("DELETE FROM practice_roles WHERE practice_id = ? AND user_id = ?");
-        $stmt_role->execute([$practice_id, $target_uid]);
+        $pdo->prepare("DELETE FROM practice_attendance WHERE practice_id = ? AND user_id = ?")->execute([$practice_id, $target_uid]);
+        $pdo->prepare("DELETE FROM practice_roles WHERE practice_id = ? AND user_id = ?")->execute([$practice_id, $target_uid]);
     }
 
     if (isset($_POST['cancel_practice'])) {
@@ -113,6 +126,12 @@ $all_users = $pdo->query("SELECT id, name_kana, generation FROM users ORDER BY g
                           <input type="time" name="end_time" value="<?php echo $p['end_time']; ?>"><br>
                     会場: <input type="text" name="location" value="<?php echo htmlspecialchars($p['location']); ?>"><br>
                     コート番号: <input type="text" name="court_number" value="<?php echo htmlspecialchars($p['court_number'] ?? ''); ?>" placeholder="例: 1, 2"><br>
+                    
+                    対象: 
+                    <label><input type="radio" name="gender_target" value="" <?php if(empty($p['gender_target'])) echo 'checked'; ?>> 指定なし</label>
+                    <label><input type="radio" name="gender_target" value="男子練" <?php if(($p['gender_target'] ?? '') === '男子練') echo 'checked'; ?>> 男子練</label>
+                    <label><input type="radio" name="gender_target" value="女子練" <?php if(($p['gender_target'] ?? '') === '女子練') echo 'checked'; ?>> 女子練</label><br>
+
                     コート代: <input type="number" name="facility_fee" value="<?php echo $p['facility_fee']; ?>"> 円<br>
                     <button type="submit" class="btn-submit" style="margin-top:10px;">基本情報を保存</button>
                 </form>

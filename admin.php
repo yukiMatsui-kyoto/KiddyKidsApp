@@ -5,9 +5,10 @@ require_once 'db.php';
 if (!isset($_SESSION['user_id'])) { header('Location: login.php'); exit; }
 if (!isset($_SESSION['is_admin'])) { header('Location: admin_login.php'); exit; }
 
-// データベース自動拡張（コート番号用の枠を追加）
+// データベース自動拡張（コート番号・男子練/女子練用の枠を追加）
 try {
     $pdo->exec("ALTER TABLE practices ADD COLUMN court_number VARCHAR(50) DEFAULT NULL");
+    $pdo->exec("ALTER TABLE practices ADD COLUMN gender_target VARCHAR(20) DEFAULT NULL");
 } catch (PDOException $e) {}
 
 $weeks = ['日', '月', '火', '水', '木', '金', '土'];
@@ -60,6 +61,13 @@ foreach ($all_practices as $p) {
                     
                     <p>コート番号（任意）</p>
                     <input type="text" name="court_number" placeholder="例: 1, 2 または A, B" style="padding:10px; margin-bottom:10px;">
+                    
+                    <p>対象（任意）</p>
+                    <div style="margin-bottom:10px;">
+                        <label><input type="radio" name="gender_target" value="" checked> 指定なし(全体)</label> 
+                        <label><input type="radio" name="gender_target" value="男子練"> 男子練</label> 
+                        <label><input type="radio" name="gender_target" value="女子練"> 女子練</label>
+                    </div>
                     
                     <p>コート代（円）</p>
                     <input type="number" name="facility_fee" value="5000" required style="padding:10px;">

@@ -42,8 +42,7 @@ $weeks = ['日', '月', '火', '水', '木', '金', '土'];
                         $w_idx = date('w', strtotime($p['practice_date']));
                         $youbi = $weeks[$w_idx];
 
-                        $gcal_title = urlencode("フレ団練"); 
-                        // ★Googleカレンダーの場所にもコート番号を含める
+                        $gcal_title = urlencode("フレ団練");
                         $gcal_loc_str = $p['location'] . (!empty($p['court_number']) ? ' ' . $p['court_number'] : '');
                         $gcal_loc = urlencode($gcal_loc_str); 
                         $gcal_start = date('Ymd\THis', strtotime($p['practice_date'] . ' ' . $p['start_time']));
@@ -55,6 +54,10 @@ $weeks = ['日', '月', '火', '水', '木', '金', '土'];
                         <td style="white-space: nowrap;">
                             <strong><?php echo date('n/j', strtotime($p['practice_date'])) . '(' . $youbi . ')'; ?></strong><br>
                             <span style="font-size: 0.85em; color: #666;"><?php echo date('H:i', strtotime($p['start_time'])); ?> - <?php echo date('H:i', strtotime($p['end_time'])); ?></span>
+                            
+                            <?php if (!empty($p['gender_target'])): ?>
+                                <br><span style="display:inline-block; margin-top:2px; font-size:0.85em; font-weight:bold; color: #d35400;">【<?php echo htmlspecialchars($p['gender_target']); ?>】</span>
+                            <?php endif; ?>
                         </td>
                         <td style="white-space: nowrap;">
                             <?php echo htmlspecialchars($p['location']); ?>

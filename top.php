@@ -11,12 +11,10 @@ $now_jst = date('Y-m-d H:i:s');
 
 $weeks = ['日', '月', '火', '水', '木', '金', '土'];
 
-// 自分の参加予定
 $stmt = $pdo->prepare("SELECT p.*, a.status, DATEDIFF(p.practice_date, CURDATE()) as days_left FROM practices p JOIN practice_attendance a ON p.id = a.practice_id WHERE a.user_id = ? AND CONCAT(p.practice_date, ' ', p.end_time) > ? AND p.is_cancelled = 0 AND a.status IN ('参加', '途中', '途中参', 'ドタ参', 'ドタ途中参', 'お手伝い') ORDER BY p.practice_date ASC");
 $stmt->execute([$user_id, $now_jst]);
 $my_upcoming_practices = $stmt->fetchAll();
 
-// 次回の練習
 $stmt = $pdo->prepare("SELECT * FROM practices WHERE CONCAT(practice_date, ' ', end_time) > ? AND is_cancelled = 0 ORDER BY practice_date ASC LIMIT 1");
 $stmt->execute([$now_jst]);
 $next_practice = $stmt->fetch();
@@ -81,6 +79,11 @@ if ($next_practice) {
                                     <div>
                                         <strong style="font-size: 1.1em;"><?php echo date('n/j', strtotime($p['practice_date'])) . '(' . $weeks[$w_idx] . ')'; ?> (<?php echo htmlspecialchars($p['location']); ?><?php if(!empty($p['court_number'])) echo ' ' . htmlspecialchars($p['court_number']); ?>)</strong><br>
                                         <span style="color: #666; font-size: 0.85em;"><?php echo date('H:i', strtotime($p['start_time'])); ?> - <?php echo date('H:i', strtotime($p['end_time'])); ?></span><br>
+                                        
+                                        <?php if (!empty($p['gender_target'])): ?>
+                                            <span style="display:inline-block; margin-top:2px; font-size:0.8em; font-weight:bold; color: #d35400;">【<?php echo htmlspecialchars($p['gender_target']); ?>】</span><br>
+                                        <?php endif; ?>
+
                                         <span style="display:inline-block; margin-top:5px; padding:2px 8px; background:#e2e8f0; border-radius:12px; font-size:0.8em;"><?php echo $p['status']; ?></span>
                                     </div>
                                     <div style="font-weight: bold; font-size: 1.2em; <?php echo ($p['days_left'] <= 7) ? 'color: #dc3545;' : 'color: #28a745;'; ?>">
@@ -106,6 +109,9 @@ if ($next_practice) {
                     <div style="font-size: 1.1em; font-weight: bold; color: #333;">
                         <?php echo date('n/j', strtotime($next_practice['practice_date'])) . '(' . $weeks[$nw_idx] . ')'; ?> 
                         <?php echo date('H:i', strtotime($next_practice['start_time'])); ?> - <?php echo date('H:i', strtotime($next_practice['end_time'])); ?>
+                        <?php if (!empty($next_practice['gender_target'])): ?>
+                            <span style="color: #d35400; margin-left:5px; font-size:0.9em;">【<?php echo htmlspecialchars($next_practice['gender_target']); ?>】</span>
+                        <?php endif; ?>
                     </div>
                     <div style="border: 2px solid #4a86e8; color: #4a86e8; padding: 4px 12px; border-radius: 4px; font-weight: bold;">
                         <?php echo htmlspecialchars($next_practice['location']); ?><?php if(!empty($next_practice['court_number'])) echo htmlspecialchars($next_practice['court_number']); ?>
